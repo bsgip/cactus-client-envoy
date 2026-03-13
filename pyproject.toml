@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools >= 40.9.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cactus-client-envoy"
+dynamic = ["version", "readme"]
+requires-python = ">= 3.12"
+description = "Envoy admin plugin for cactus-client — handles admin instructions against a local Envoy server"
+dependencies = [
+    "cactus_client>=0.1.2",
+    "envoy-schema>=0.31.1",
+    "aiohttp>=3.11.12,<4",
+    "apluggy>=1.1.2,<2",
+]
+
+[project.entry-points."cactus_client.admin"]
+envoy = "cactus_client_envoy.plugin:EnvoyAdminPlugin"
+
+[project.optional-dependencies]
+dev = [
+    "bandit",
+    "black",
+    "coverage",
+    "flake8",
+    "flake8-bugbear",
+    "mypy",
+]
+test = ["assertical", "pytest", "pytest-asyncio"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"cactus_client_envoy" = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "cactus_client_envoy.__version__" }
+readme = { file = ["README.md"], content-type = "text/markdown" }
+
+[tool.black]
+line-length = 120
+
+[tool.pytest.ini_options]
+pythonpath = ["src/"]
+testpaths = "tests"
+
+[tool.isort]
+profile = "black"
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+
+[tool.mypy]
+exclude = ["tests", "dist", "build"]
+python_version = "3.12"
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+namespace_packages = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["apluggy", "apluggy.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["cactus_client_envoy.plugin"]
+disallow_untyped_decorators = false
