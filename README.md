@@ -131,12 +131,14 @@ Ensures a virtual DER client is registered (or not) as a site in the Envoy datab
 admin_instructions:
   - type: ensure-end-device
     parameters:
-      registered: true   # true = insert the site, false = delete it
+      registered: true      # required — true = insert the site, false = delete it
+      client_type: device   # optional — "device" (default) or "aggregator"
+      has_der_list: true    # optional — if true, ensures a SiteDER record exists for the site
 ```
 
-The optional `client` parameter selects a specific client alias; if omitted, the first configured client is used.
+The optional `client` field selects a specific client alias; if omitted, the first configured client is used.
 
-Sites are created with `aggregator_id=0` (null aggregator), `timezone_id=UTC`, `device_category=PHOTOVOLTAIC_SYSTEM`, and `post_rate_seconds=60`. The `registration_pin`, `lfdi`, and `sfdi` are taken from the client's `.cactus.yaml` config.
+All sites are created with `timezone_id=UTC` and `post_rate_seconds=60`. The `registration_pin`, `lfdi`, and `sfdi` are taken from the client's `.cactus.yaml` config.
 
 ---
 
