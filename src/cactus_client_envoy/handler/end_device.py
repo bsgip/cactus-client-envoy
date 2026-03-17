@@ -3,7 +3,11 @@ import logging
 from cactus_test_definitions.server.test_procedures import AdminInstruction, ClientType
 from envoy.server.model.aggregator import AggregatorCertificateAssignment, NULL_AGGREGATOR_ID
 from envoy.server.model.base import Certificate
+from envoy.server.model.doe import DynamicOperatingEnvelope
 from envoy.server.model.site import Site, SiteDER
+from envoy.server.model.site_reading import SiteReading, SiteReadingType
+from envoy.server.model.subscription import Subscription
+from envoy.server.model.tariff import TariffGeneratedRate
 from envoy_schema.server.schema.sep2.types import DeviceCategory
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +34,7 @@ async def ensure_end_device(
     client_config = resolve_client_config(instruction, context)
 
     # envoy always includes a RegistrationLink for registered sites (registration_pin is non-nullable)
-    if has_registration_link is False: # TODO: What should behaviour be?
+    if has_registration_link is False:
         raise NotImplementedError(
             "ensure-end-device: has_registration_link=False is not supported — "
             "envoy always includes a RegistrationLink for registered sites"
@@ -85,10 +89,40 @@ async def ensure_end_device(
         if existing is None:
             logger.info("ensure-end-device: no site found for LFDI %s, nothing to remove", client_config.lfdi)
             return ActionResult.done()
-        await session.execute(delete(Site).where(Site.site_id == existing.site_id))
+        await _delete_site(existing.site_id, session)
         await session.commit()
         logger.info("ensure-end-device: deleted site site_id=%s LFDI=%s", existing.site_id, client_config.lfdi)
         return ActionResult.done()
+
+
+async def _delete_site(site_id: int, session: AsyncSession) -> None:
+    """Delete a site and all dependent records that lack ON DELETE CASCADE in the DB schema.
+
+    Mirrors delete_site_for_aggregator in envoy.server.crud.site, with two differences:
+    - Plain DELETE instead of delete_rows_into_archive — no archival needed for test teardown.
+    - Skips explicit DER child and SubscriptionCondition cleanup — the DB-level ON DELETE CASCADE
+      handles these
+    """
+
+    # site_reading → site_reading_type (no cascade): delete readings before their types
+    srt_ids = (
+        (await session.execute(select(SiteReadingType.site_reading_type_id).where(SiteReadingType.site_id == site_id)))
+        .scalars()
+        .all()
+    )
+    if srt_ids:
+        await session.execute(delete(SiteReading).where(SiteReading.site_reading_type_id.in_(srt_ids)))
+    await session.execute(delete(SiteReadingType).where(SiteReadingType.site_id == site_id))
+
+    # subscriptions (scoped_site_id is nullable FK, no cascade); SubscriptionCondition cascades from subscription
+    await session.execute(delete(Subscription).where(Subscription.scoped_site_id == site_id))
+
+    # tariff rates and DOEs (no cascade)
+    await session.execute(delete(TariffGeneratedRate).where(TariffGeneratedRate.site_id == site_id))
+    await session.execute(delete(DynamicOperatingEnvelope).where(DynamicOperatingEnvelope.site_id == site_id))
+
+    # site itself (cascade handles: site_group_assignment, site_der + children, response, log_events)
+    await session.execute(delete(Site).where(Site.site_id == site_id))
 
 
 async def _resolve_aggregator_id(lfdi: str, session: AsyncSession) -> int | None:
@@ -103,7 +137,10 @@ async def _resolve_aggregator_id(lfdi: str, session: AsyncSession) -> int | None
 
 
 async def _ensure_site_der(site_id: int, session: AsyncSession) -> None:
-    """Create a SiteDER for the given site if one does not already exist."""
+    """Create a SiteDER for the given site if one does not already exist.
+
+    Mirrors generate_default_site_der in envoy.server.crud.der
+    """
     existing = (await session.execute(select(SiteDER).where(SiteDER.site_id == site_id))).scalar_one_or_none()
     if existing is None:
         session.add(SiteDER(site_id=site_id, changed_time=utc_now()))
