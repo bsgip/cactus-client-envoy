@@ -10,6 +10,7 @@ from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult, StepExecution
 from cactus_client.model.parameter import resolve_variable_expressions_from_parameters
 
+from cactus_client_envoy.handler.cleanup import reset_test_state
 from cactus_client_envoy.handler.common import resolve_client_config
 from cactus_client_envoy.handler.der_control import create_default_der_control, create_der_control
 from cactus_client_envoy.handler.end_device import ensure_end_device
@@ -33,6 +34,8 @@ class EnvoyAdminPlugin:
             return ActionResult.failed(f"{ENVOY_DB_DSN_ENV} environment variable is not set.")
         self._engine = create_async_engine(dsn)
         self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False)
+        async with self._sessionmaker() as session:
+            await reset_test_state(session)
         return ActionResult.done()
 
     @hookimpl
