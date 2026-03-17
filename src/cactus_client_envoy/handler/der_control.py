@@ -17,7 +17,8 @@ from cactus_client_envoy.handler.common import resolve_client_config
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DURATION_SECONDS = 60
+DEFAULT_DURATION_SECONDS = 8
+DEFAULT_SCHEDULED_OFFSET_SECONDS = 2
 
 
 async def create_der_control(
@@ -63,7 +64,9 @@ async def create_der_control(
         if start_offset_seconds is not None:
             start_time = now + timedelta(seconds=start_offset_seconds)
         else:
-            # Stack sequentially after the latest existing control for this site+group
+            # Stack sequentially after the latest existing non-expired control for this site+group.
+            # If there is no control (or latest end_time is already in the past), use a default future offset so the
+            # DOE stays "Scheduled" long enough for discovery before its "Active".
             latest_end = (
                 await session.execute(
                     select(func.max(DynamicOperatingEnvelope.end_time)).where(
@@ -72,7 +75,10 @@ async def create_der_control(
                     )
                 )
             ).scalar_one_or_none()
-            start_time = (latest_end or now) + timedelta(seconds=1)
+            if latest_end is not None and latest_end > now:
+                start_time = latest_end + timedelta(seconds=1)
+            else:
+                start_time = now + timedelta(seconds=DEFAULT_SCHEDULED_OFFSET_SECONDS)
 
     end_time = start_time + timedelta(seconds=duration_seconds)
 
@@ -91,7 +97,9 @@ async def create_der_control(
         set_connected=instruction.parameters.get("opModConnect"),
         set_energized=instruction.parameters.get("opModEnergize"),
         set_point_percentage=_dec(instruction.parameters.get("opModFixedW")),
-        ramp_time_seconds=_dec(instruction.parameters.get("rampTms"), divisor=100),  # rampTms is hundredths of seconds; DB stores seconds
+        ramp_time_seconds=_dec(
+            instruction.parameters.get("rampTms"), divisor=100
+        ),  # rampTms is hundredths of seconds; DB stores seconds
     )
     session.add(doe)
     await session.flush()
