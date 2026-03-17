@@ -95,12 +95,8 @@ This registers:
 
 ### 5 — Set environment variables
 
-```bash
-export ENVOY_DB_DSN=postgresql+asyncpg://test_user:test_pwd@localhost:8003/test_db
-export DATABASE_URL=postgresql+asyncpg://test_user:test_pwd@localhost:8003/test_db
-```
+Copy `sample.env` to `.env` in the repo root and fill in your values:
 
-Add these to your shell profile (`~/.bashrc` or `~/.zshrc`) to avoid setting them every session.
 
 ### 6 — Run a test
 
