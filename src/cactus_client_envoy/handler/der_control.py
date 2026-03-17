@@ -91,7 +91,7 @@ async def create_der_control(
         set_connected=instruction.parameters.get("opModConnect"),
         set_energized=instruction.parameters.get("opModEnergize"),
         set_point_percentage=_dec(instruction.parameters.get("opModFixedW")),
-        ramp_time_seconds=_dec(instruction.parameters.get("rampTms")),
+        ramp_time_seconds=_dec(instruction.parameters.get("rampTms"), divisor=100),  # rampTms is hundredths of seconds; DB stores seconds
     )
     session.add(doe)
     await session.flush()
@@ -171,5 +171,5 @@ async def create_default_der_control(
     return ActionResult.done()
 
 
-def _dec(value: Optional[float]) -> Optional[Decimal]:
-    return Decimal(str(value)) if value is not None else None
+def _dec(value: Optional[float], divisor: int = 1) -> Optional[Decimal]:
+    return Decimal(str(value)) / divisor if value is not None else None
