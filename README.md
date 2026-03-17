@@ -123,22 +123,12 @@ Test reports are written to `./cactus-test/`.
 
 ## Supported admin instructions
 
-### `ensure-end-device`
+For parameter documentation see [`cactus-test-definitions`](https://github.com/bsgip/cactus-test-definitions). Envoy-specific constraints:
 
-Ensures a virtual DER client is registered (or not) as a site in the Envoy database.
+- `ensure-end-device`: `has_registration_link=False` is not supported — envoy always includes a RegistrationLink. For `client_type=aggregator`, the aggregator certificate must already be registered in the Envoy DB.
+- `create-der-control`: if no `SiteControlGroup` exists for the given primacy, one is created automatically. Scheduled controls without `start_offset_seconds` are stacked sequentially after the latest existing end time.
 
-```yaml
-admin_instructions:
-  - type: ensure-end-device
-    parameters:
-      registered: true      # required — true = insert the site, false = delete it
-      client_type: device   # optional — "device" (default) or "aggregator"
-      has_der_list: true    # optional — if true, ensures a SiteDER record exists for the site
-```
-
-The optional `client` field selects a specific client alias; if omitted, the first configured client is used.
-
-All sites are created with `timezone_id=UTC` and `post_rate_seconds=60`. The `registration_pin`, `lfdi`, and `sfdi` are taken from the client's `.cactus.yaml` config.
+Supported: `ensure-end-device`, `create-der-control`, `create-default-der-control`
 
 ---
 

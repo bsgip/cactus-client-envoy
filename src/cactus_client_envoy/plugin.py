@@ -1,5 +1,6 @@
 import logging
 import os
+from dataclasses import replace
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
@@ -7,7 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from cactus_client.admin.plugins import hookimpl
 from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult, StepExecution
+from cactus_client.model.parameter import resolve_variable_expressions_from_parameters
 
+from cactus_client_envoy.handler.common import resolve_client_config
+from cactus_client_envoy.handler.der_control import create_default_der_control, create_der_control
 from cactus_client_envoy.handler.end_device import ensure_end_device
 
 ENVOY_DB_DSN_ENV = "ENVOY_DB_DSN"
@@ -44,8 +48,19 @@ class EnvoyAdminPlugin:
         self, instruction: AdminInstruction, step: StepExecution, context: AdminContext
     ) -> ActionResult | None:
         assert self._sessionmaker is not None
+
+        client_config = resolve_client_config(instruction, context)
+        resolved_params = await resolve_variable_expressions_from_parameters(client_config, instruction.parameters)
+        instruction = replace(instruction, parameters=resolved_params)
+
         match instruction.type:
             case "ensure-end-device":
                 async with self._sessionmaker() as session:
                     return await ensure_end_device(instruction, context, session)
+            case "create-der-control":
+                async with self._sessionmaker() as session:
+                    return await create_der_control(instruction, context, session)
+            case "create-default-der-control":
+                async with self._sessionmaker() as session:
+                    return await create_default_der_control(instruction, context, session)
         return None

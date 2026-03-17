@@ -1,0 +1,175 @@
+import logging
+from datetime import timedelta
+from decimal import Decimal
+from typing import Optional
+
+from cactus_test_definitions.server.test_procedures import AdminInstruction
+from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup, SiteControlGroupDefault
+from envoy.server.model.site import Site
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from cactus_client.model.context import AdminContext
+from cactus_client.model.execution import ActionResult
+from cactus_client.time import utc_now
+
+from cactus_client_envoy.handler.common import resolve_client_config
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_DURATION_SECONDS = 60
+
+
+async def create_der_control(
+    instruction: AdminInstruction,
+    context: AdminContext,
+    session: AsyncSession,
+) -> ActionResult:
+    status: str = instruction.parameters["status"]  # "active" or "scheduled"
+    primacy: int = instruction.parameters.get("primacy", 1)
+    duration_seconds: int = instruction.parameters.get("duration_seconds", DEFAULT_DURATION_SECONDS)
+    start_offset_seconds: Optional[int] = instruction.parameters.get("start_offset_seconds")
+
+    client_config = resolve_client_config(instruction, context)
+
+    # Look up site by LFDI
+    site = (await session.execute(select(Site).where(Site.lfdi == client_config.lfdi))).scalar_one_or_none()
+    if site is None:
+        return ActionResult.failed(
+            f"create-der-control: no site found for LFDI {client_config.lfdi} — run ensure-end-device first"
+        )
+
+    # Find or create a SiteControlGroup (DERProgram) for the given primacy
+    group = (
+        await session.execute(select(SiteControlGroup).where(SiteControlGroup.primacy == primacy))
+    ).scalar_one_or_none()
+    if group is None:
+        group = SiteControlGroup(
+            description=f"cactus-primacy-{primacy}", primacy=primacy, fsa_id=1, changed_time=utc_now()
+        )
+        session.add(group)
+        await session.flush()
+        logger.info(
+            "create-der-control: created SiteControlGroup primacy=%d (id=%d)", primacy, group.site_control_group_id
+        )
+
+    now = utc_now()
+
+    if status == "active":
+        # Start in the past so the control is currently active
+        start_time = now - timedelta(seconds=start_offset_seconds if start_offset_seconds is not None else 1)
+    else:
+        # "scheduled" — start in the future
+        if start_offset_seconds is not None:
+            start_time = now + timedelta(seconds=start_offset_seconds)
+        else:
+            # Stack sequentially after the latest existing control for this site+group
+            latest_end = (
+                await session.execute(
+                    select(func.max(DynamicOperatingEnvelope.end_time)).where(
+                        (DynamicOperatingEnvelope.site_id == site.site_id)
+                        & (DynamicOperatingEnvelope.site_control_group_id == group.site_control_group_id)
+                    )
+                )
+            ).scalar_one_or_none()
+            start_time = (latest_end or now) + timedelta(seconds=1)
+
+    end_time = start_time + timedelta(seconds=duration_seconds)
+
+    doe = DynamicOperatingEnvelope(
+        site_control_group_id=group.site_control_group_id,
+        site_id=site.site_id,
+        changed_time=now,
+        start_time=start_time,
+        duration_seconds=duration_seconds,
+        end_time=end_time,
+        superseded=False,
+        import_limit_active_watts=_dec(instruction.parameters.get("opModImpLimW")),
+        export_limit_watts=_dec(instruction.parameters.get("opModExpLimW")),
+        generation_limit_active_watts=_dec(instruction.parameters.get("opModGenLimW")),
+        load_limit_active_watts=_dec(instruction.parameters.get("opModLoadLimW")),
+        set_connected=instruction.parameters.get("opModConnect"),
+        set_energized=instruction.parameters.get("opModEnergize"),
+        set_point_percentage=_dec(instruction.parameters.get("opModFixedW")),
+        ramp_time_seconds=_dec(instruction.parameters.get("rampTms")),
+    )
+    session.add(doe)
+    await session.flush()
+    await session.commit()
+    logger.info(
+        "create-der-control: created DOE id=%d site_id=%d start=%s end=%s",
+        doe.dynamic_operating_envelope_id,
+        site.site_id,
+        start_time,
+        end_time,
+    )
+    return ActionResult.done()
+
+
+async def create_default_der_control(
+    instruction: AdminInstruction,
+    context: AdminContext,
+    session: AsyncSession,
+) -> ActionResult:
+    primacy: int = instruction.parameters.get("primacy", 1)
+
+    # Find or create a SiteControlGroup (DERProgram) for the given primacy
+    group = (
+        await session.execute(select(SiteControlGroup).where(SiteControlGroup.primacy == primacy))
+    ).scalar_one_or_none()
+    if group is None:
+        group = SiteControlGroup(
+            description=f"cactus-primacy-{primacy}", primacy=primacy, fsa_id=1, changed_time=utc_now()
+        )
+        session.add(group)
+        await session.flush()
+        logger.info(
+            "create-default-der-control: created SiteControlGroup primacy=%d (id=%d)",
+            primacy,
+            group.site_control_group_id,
+        )
+
+    existing = (
+        await session.execute(
+            select(SiteControlGroupDefault).where(
+                SiteControlGroupDefault.site_control_group_id == group.site_control_group_id
+            )
+        )
+    ).scalar_one_or_none()
+
+    if existing is not None:
+        existing.import_limit_active_watts = _dec(instruction.parameters.get("opModImpLimW"))
+        existing.export_limit_active_watts = _dec(instruction.parameters.get("opModExpLimW"))
+        existing.generation_limit_active_watts = _dec(instruction.parameters.get("opModGenLimW"))
+        existing.load_limit_active_watts = _dec(instruction.parameters.get("opModLoadLimW"))
+        existing.ramp_rate_percent_per_second = instruction.parameters.get("setGradW")
+        existing.version += 1
+        existing.changed_time = utc_now()
+        logger.info(
+            "create-default-der-control: updated SiteControlGroupDefault id=%d (version=%d)",
+            existing.site_control_group_default_id,
+            existing.version,
+        )
+    else:
+        default = SiteControlGroupDefault(
+            site_control_group_id=group.site_control_group_id,
+            changed_time=utc_now(),
+            import_limit_active_watts=_dec(instruction.parameters.get("opModImpLimW")),
+            export_limit_active_watts=_dec(instruction.parameters.get("opModExpLimW")),
+            generation_limit_active_watts=_dec(instruction.parameters.get("opModGenLimW")),
+            load_limit_active_watts=_dec(instruction.parameters.get("opModLoadLimW")),
+            ramp_rate_percent_per_second=instruction.parameters.get("setGradW"),
+        )
+        session.add(default)
+        logger.info(
+            "create-default-der-control: created SiteControlGroupDefault for group_id=%d",
+            group.site_control_group_id,
+        )
+
+    await session.flush()
+    await session.commit()
+    return ActionResult.done()
+
+
+def _dec(value: Optional[float]) -> Optional[Decimal]:
+    return Decimal(str(value)) if value is not None else None
