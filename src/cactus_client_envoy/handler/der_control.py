@@ -82,6 +82,13 @@ async def create_der_control(
 
     end_time = start_time + timedelta(seconds=duration_seconds)
 
+    export_limit = _dec(instruction.parameters.get("opModExpLimW"))
+    if export_limit is None and all(
+        instruction.parameters.get(k) is None
+        for k in ("opModImpLimW", "opModGenLimW", "opModLoadLimW", "opModConnect", "opModEnergize", "opModFixedW")
+    ):
+        export_limit = Decimal(0)
+
     doe = DynamicOperatingEnvelope(
         site_control_group_id=group.site_control_group_id,
         site_id=site.site_id,
@@ -90,8 +97,9 @@ async def create_der_control(
         duration_seconds=duration_seconds,
         end_time=end_time,
         superseded=False,
+        randomize_start_seconds=instruction.parameters.get("randomizeStart"),
         import_limit_active_watts=_dec(instruction.parameters.get("opModImpLimW")),
-        export_limit_watts=_dec(instruction.parameters.get("opModExpLimW")),
+        export_limit_watts=export_limit,
         generation_limit_active_watts=_dec(instruction.parameters.get("opModGenLimW")),
         load_limit_active_watts=_dec(instruction.parameters.get("opModLoadLimW")),
         set_connected=instruction.parameters.get("opModConnect"),

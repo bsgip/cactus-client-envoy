@@ -16,7 +16,7 @@ from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult
 from cactus_client.time import utc_now
 
-from cactus_client_envoy.handler.common import resolve_client_config
+from cactus_client_envoy.handler.common import find_aggregator_id, resolve_client_config
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,34 @@ async def ensure_end_device(
     if is_aggregator:
         aggregator_id = await _resolve_aggregator_id(client_config.lfdi, session)
         if aggregator_id is None:
-            return ActionResult.failed(
-                f"ensure-end-device: no aggregator found for LFDI {client_config.lfdi} — "
-                "ensure the aggregator certificate registered in the envoy DB."
+            if not registered:
+                logger.info(
+                    "ensure-end-device: no aggregator assignment found for LFDI %s, nothing to remove",
+                    client_config.lfdi,
+                )
+                return ActionResult.done()
+            cert = (
+                await session.execute(select(Certificate).where(Certificate.lfdi == client_config.lfdi.lower()))
+            ).scalar_one_or_none()
+            if cert is None:
+                return ActionResult.failed(
+                    f"ensure-end-device: no certificate found for LFDI {client_config.lfdi} — "
+                    "ensure the certificate is registered in the envoy DB."
+                )
+            aggregator_id = await find_aggregator_id(client_config.lfdi, context, session)
+            if aggregator_id is None:
+                return ActionResult.failed(
+                    "ensure-end-device: cannot determine which aggregator to assign — "
+                    "ensure an aggregator exists in the envoy DB."
+                )
+            session.add(
+                AggregatorCertificateAssignment(certificate_id=cert.certificate_id, aggregator_id=aggregator_id)
+            )
+            await session.flush()
+            logger.info(
+                "ensure-end-device: granted aggregator access for LFDI %s to aggregator_id=%d",
+                client_config.lfdi,
+                aggregator_id,
             )
         device_category = DeviceCategory.VIRTUAL_OR_MIXED_DER
     else:
@@ -126,7 +151,7 @@ async def _resolve_aggregator_id(lfdi: str, session: AsyncSession) -> int | None
     stmt = (
         select(AggregatorCertificateAssignment.aggregator_id)
         .join(Certificate, Certificate.certificate_id == AggregatorCertificateAssignment.certificate_id)
-        .where(Certificate.lfdi == lfdi)
+        .where(Certificate.lfdi == lfdi.lower())
         .limit(1)
     )
     return (await session.execute(stmt)).scalar_one_or_none()
