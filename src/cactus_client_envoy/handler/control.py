@@ -21,13 +21,15 @@ async def ensure_der_control_list(
     """Ensure the DERControlList is accessible to the client.
 
     In envoy the DERControlList is accessible once at least one SiteControlGroup (DERProgram) exists.
+    Creates a default SiteControlGroup if none exists.
     The subscribable flag is advisory — envoy supports subscriptions for all registered clients by default.
     """
     group = (await session.execute(select(SiteControlGroup).limit(1))).scalar_one_or_none()
     if group is None:
-        return ActionResult.failed(
-            "ensure-der-control-list: no SiteControlGroup (DERProgram) exists — run ensure-der-program first"
-        )
+        group = SiteControlGroup(description="cactus-default", primacy=1, fsa_id=1, changed_time=utc_now())
+        session.add(group)
+        await session.commit()
+        logger.info("ensure-der-control-list: created default SiteControlGroup (id=%d)", group.site_control_group_id)
     return ActionResult.done()
 
 
