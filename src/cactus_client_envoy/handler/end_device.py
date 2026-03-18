@@ -1,7 +1,7 @@
 import logging
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction, ClientType
-from envoy.server.model.aggregator import AggregatorCertificateAssignment, NULL_AGGREGATOR_ID
+from envoy.server.model.aggregator import AggregatorCertificateAssignment
 from envoy.server.model.base import Certificate
 from envoy.server.model.doe import DynamicOperatingEnvelope
 from envoy.server.model.site import Site, SiteDER
@@ -22,9 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 async def ensure_end_device(
-    instruction: AdminInstruction,
-    context: AdminContext,
-    session: AsyncSession,
+    instruction: AdminInstruction, context: AdminContext, session: AsyncSession
 ) -> ActionResult:
     registered: bool = instruction.parameters["registered"]
     has_der_list: bool | None = instruction.parameters.get("has_der_list")
@@ -36,8 +34,7 @@ async def ensure_end_device(
     # envoy always includes a RegistrationLink for registered sites (registration_pin is non-nullable)
     if has_registration_link is False:
         raise NotImplementedError(
-            "ensure-end-device: has_registration_link=False is not supported — "
-            "envoy always includes a RegistrationLink for registered sites"
+            "ensure-end-device: has_registration_link=False is not supported — envoy always includes one"
         )
 
     is_aggregator = client_type_param == ClientType.AGGREGATOR or (
@@ -49,11 +46,11 @@ async def ensure_end_device(
         if aggregator_id is None:
             return ActionResult.failed(
                 f"ensure-end-device: no aggregator found for LFDI {client_config.lfdi} — "
-                "is the aggregator certificate registered in the envoy DB?"
+                "ensure the aggregator certificate registered in the envoy DB."
             )
         device_category = DeviceCategory.VIRTUAL_OR_MIXED_DER
     else:
-        aggregator_id = NULL_AGGREGATOR_ID
+        aggregator_id = 0
         device_category = DeviceCategory.PHOTOVOLTAIC_SYSTEM
 
     stmt = select(Site).where((Site.aggregator_id == aggregator_id) & (Site.lfdi == client_config.lfdi))
@@ -100,11 +97,10 @@ async def _delete_site(site_id: int, session: AsyncSession) -> None:
 
     Mirrors delete_site_for_aggregator in envoy.server.crud.site, with two differences:
     - Plain DELETE instead of delete_rows_into_archive — no archival needed for test teardown.
-    - Skips explicit DER child and SubscriptionCondition cleanup — the DB-level ON DELETE CASCADE
-      handles these
+    - Skips explicit DER child and SubscriptionCondition cleanup — the ON DELETE CASCADE handles it
     """
 
-    # site_reading → site_reading_type (no cascade): delete readings before their types
+    # site_reading - site_reading_type (no cascade): delete readings before their types
     srt_ids = (
         (await session.execute(select(SiteReadingType.site_reading_type_id).where(SiteReadingType.site_id == site_id)))
         .scalars()
@@ -138,7 +134,6 @@ async def _resolve_aggregator_id(lfdi: str, session: AsyncSession) -> int | None
 
 async def _ensure_site_der(site_id: int, session: AsyncSession) -> None:
     """Create a SiteDER for the given site if one does not already exist.
-
     Mirrors generate_default_site_der in envoy.server.crud.der
     """
     existing = (await session.execute(select(SiteDER).where(SiteDER.site_id == site_id))).scalar_one_or_none()

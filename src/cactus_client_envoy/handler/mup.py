@@ -15,9 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 async def ensure_mup_list_empty(
-    instruction: AdminInstruction,
-    context: AdminContext,
-    session: AsyncSession,
+    instruction: AdminInstruction, context: AdminContext, session: AsyncSession
 ) -> ActionResult:
     client_config = resolve_client_config(instruction, context)
 
@@ -38,9 +36,7 @@ async def ensure_mup_list_empty(
     if srt_ids:
         await session.execute(delete(SiteReading).where(SiteReading.site_reading_type_id.in_(srt_ids)))
         await session.execute(delete(SiteReadingType).where(SiteReadingType.site_id == site.site_id))
-        logger.info(
-            "ensure-mup-list-empty: deleted %d SiteReadingType(s) for site_id=%d", len(srt_ids), site.site_id
-        )
+        logger.info("ensure-mup-list-empty: deleted %d SiteReadingType(s) for site_id=%d", len(srt_ids), site.site_id)
     else:
         logger.info("ensure-mup-list-empty: no MUPs found for site_id=%d", site.site_id)
 
