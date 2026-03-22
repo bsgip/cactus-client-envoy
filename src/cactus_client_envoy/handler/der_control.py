@@ -97,7 +97,7 @@ async def create_der_control(
         duration_seconds=duration_seconds,
         end_time=end_time,
         superseded=False,
-        randomize_start_seconds=instruction.parameters.get("randomizeStart"),
+        randomize_start_seconds=instruction.parameters.get("randomizeStart_seconds"),
         import_limit_active_watts=_dec(instruction.parameters.get("opModImpLimW")),
         export_limit_watts=export_limit,
         generation_limit_active_watts=_dec(instruction.parameters.get("opModGenLimW")),
