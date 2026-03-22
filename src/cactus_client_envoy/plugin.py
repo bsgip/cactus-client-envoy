@@ -1,9 +1,14 @@
 import logging
 import os
+import urllib.parse
 from dataclasses import replace
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from taskiq import InMemoryBroker
+
+import envoy.notification.handler as _nh
+from envoy.notification.handler import STATE_DB_SESSION_MAKER, STATE_HREF_PREFIX
 
 from cactus_client.admin.plugins import hookimpl
 from cactus_client.model.context import AdminContext
@@ -31,6 +36,7 @@ class EnvoyAdminPlugin:
     def __init__(self) -> None:
         self._engine: AsyncEngine | None = None
         self._sessionmaker: async_sessionmaker[AsyncSession] | None = None
+        self._broker: InMemoryBroker | None = None
         self._fsa_annotations: dict[str, int] = {}
 
     @hookimpl
@@ -41,6 +47,16 @@ class EnvoyAdminPlugin:
         self._engine = create_async_engine(dsn)
         self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False)
         self._fsa_annotations = {}
+
+        parsed = urllib.parse.urlparse(context.server_config.device_capability_uri)
+        href_prefix = f"{parsed.scheme}://{parsed.netloc}"
+
+        self._broker = InMemoryBroker()
+        await self._broker.startup()
+        setattr(self._broker.state, STATE_DB_SESSION_MAKER, self._sessionmaker)
+        setattr(self._broker.state, STATE_HREF_PREFIX, href_prefix)
+        _nh._enabled_broker = self._broker
+
         async with self._sessionmaker() as session:
             await reset_test_state(session)
             if context.server_config.notification_uri:
@@ -49,6 +65,10 @@ class EnvoyAdminPlugin:
 
     @hookimpl
     async def admin_teardown(self, context: AdminContext) -> ActionResult:
+        if self._broker is not None:
+            _nh._enabled_broker = None
+            await self._broker.shutdown()
+            self._broker = None
         if self._engine is not None:
             await self._engine.dispose()
             self._engine = None
