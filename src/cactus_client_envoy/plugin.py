@@ -11,7 +11,7 @@ from cactus_client.model.execution import ActionResult, StepExecution
 from cactus_client.model.parameter import resolve_variable_expressions_from_parameters
 
 from cactus_client_envoy.handler.access import set_client_access
-from cactus_client_envoy.handler.cleanup import reset_test_state
+from cactus_client_envoy.handler.cleanup import ensure_notification_domain_whitelisted, reset_test_state
 from cactus_client_envoy.handler.common import resolve_client_config
 from cactus_client_envoy.handler.control import clear_der_controls, ensure_der_control_list
 from cactus_client_envoy.handler.der_control import create_default_der_control, create_der_control
@@ -43,6 +43,8 @@ class EnvoyAdminPlugin:
         self._fsa_annotations = {}
         async with self._sessionmaker() as session:
             await reset_test_state(session)
+            if context.server_config.notification_uri:
+                await ensure_notification_domain_whitelisted(session, context.server_config.notification_uri)
         return ActionResult.done()
 
     @hookimpl
