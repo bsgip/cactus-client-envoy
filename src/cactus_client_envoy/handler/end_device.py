@@ -1,12 +1,13 @@
 import logging
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction, ClientType
+from envoy.notification.manager.notification import NotificationManager
 from envoy.server.model.aggregator import AggregatorCertificateAssignment
 from envoy.server.model.base import Certificate
 from envoy.server.model.doe import DynamicOperatingEnvelope
 from envoy.server.model.site import Site, SiteDER
 from envoy.server.model.site_reading import SiteReading, SiteReadingType
-from envoy.server.model.subscription import Subscription
+from envoy.server.model.subscription import Subscription, SubscriptionResource
 from envoy.server.model.tariff import TariffGeneratedRate
 from envoy_schema.server.schema.sep2.types import DeviceCategory
 from sqlalchemy import delete, select
@@ -82,11 +83,14 @@ async def ensure_end_device(
     existing = (await session.execute(stmt)).scalar_one_or_none()
 
     if registered:
+        site_created = False
         if existing is None:
+            site_created = True
+            site_changed_time = utc_now()
             site = Site(
                 aggregator_id=aggregator_id,
                 timezone_id="UTC",
-                changed_time=utc_now(),
+                changed_time=site_changed_time,
                 lfdi=client_config.lfdi,
                 sfdi=client_config.sfdi,
                 device_category=device_category,
@@ -106,6 +110,8 @@ async def ensure_end_device(
             await _ensure_site_der(site.site_id, session)
 
         await session.commit()
+        if site_created:
+            await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.SITE, site_changed_time)
         return ActionResult.done()
     else:
         if existing is None:

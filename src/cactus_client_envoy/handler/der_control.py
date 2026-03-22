@@ -4,8 +4,10 @@ from decimal import Decimal
 from typing import Optional
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction
+from envoy.notification.manager.notification import NotificationManager
 from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup, SiteControlGroupDefault
 from envoy.server.model.site import Site
+from envoy.server.model.subscription import SubscriptionResource
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -119,6 +121,7 @@ async def create_der_control(
         start_time,
         end_time,
     )
+    await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.DYNAMIC_OPERATING_ENVELOPE, now)
     return ActionResult.done()
 
 
@@ -153,6 +156,7 @@ async def create_default_der_control(
         )
     ).scalar_one_or_none()
 
+    now = utc_now()
     if existing is not None:
         existing.import_limit_active_watts = _dec(instruction.parameters.get("opModImpLimW"))
         existing.export_limit_active_watts = _dec(instruction.parameters.get("opModExpLimW"))
@@ -160,7 +164,7 @@ async def create_default_der_control(
         existing.load_limit_active_watts = _dec(instruction.parameters.get("opModLoadLimW"))
         existing.ramp_rate_percent_per_second = instruction.parameters.get("setGradW")
         existing.version += 1
-        existing.changed_time = utc_now()
+        existing.changed_time = now
         logger.info(
             "create-default-der-control: updated SiteControlGroupDefault id=%d (version=%d)",
             existing.site_control_group_default_id,
@@ -169,7 +173,7 @@ async def create_default_der_control(
     else:
         default = SiteControlGroupDefault(
             site_control_group_id=group.site_control_group_id,
-            changed_time=utc_now(),
+            changed_time=now,
             import_limit_active_watts=_dec(instruction.parameters.get("opModImpLimW")),
             export_limit_active_watts=_dec(instruction.parameters.get("opModExpLimW")),
             generation_limit_active_watts=_dec(instruction.parameters.get("opModGenLimW")),
@@ -184,6 +188,7 @@ async def create_default_der_control(
 
     await session.flush()
     await session.commit()
+    await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.DEFAULT_SITE_CONTROL, now)
     return ActionResult.done()
 
 

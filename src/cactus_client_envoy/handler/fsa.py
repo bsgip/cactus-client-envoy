@@ -1,7 +1,9 @@
 import logging
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction
+from envoy.notification.manager.notification import NotificationManager
 from envoy.server.model.doe import SiteControlGroup
+from envoy.server.model.subscription import SubscriptionResource
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -58,8 +60,9 @@ async def ensure_der_program(
     ).scalar_one_or_none()
 
     if group is None:
+        now = utc_now()
         group = SiteControlGroup(
-            description=f"cactus-fsa{fsa_id}-primacy-{primacy}", primacy=primacy, fsa_id=fsa_id, changed_time=utc_now()
+            description=f"cactus-fsa{fsa_id}-primacy-{primacy}", primacy=primacy, fsa_id=fsa_id, changed_time=now
         )
         session.add(group)
         await session.flush()
@@ -69,6 +72,9 @@ async def ensure_der_program(
             primacy,
             group.site_control_group_id,
         )
+        await session.commit()
+        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.SITE_CONTROL_GROUP, now)
+        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now)
     else:
         logger.info(
             "ensure-der-program: SiteControlGroup already exists fsa_id=%d primacy=%d (id=%d)",
@@ -76,6 +82,5 @@ async def ensure_der_program(
             primacy,
             group.site_control_group_id,
         )
-
-    await session.commit()
+        await session.commit()
     return ActionResult.done()
