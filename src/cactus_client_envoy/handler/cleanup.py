@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 from envoy.server.model.aggregator import Aggregator, AggregatorDomain, NULL_AGGREGATOR_ID
+from envoy.server.model.archive.doe import ArchiveDynamicOperatingEnvelope
 from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup, SiteControlGroupDefault
 from envoy.server.model.site import Site
 from envoy.server.model.site_reading import SiteReading, SiteReadingType
@@ -24,6 +25,7 @@ async def reset_test_state(session: AsyncSession) -> None:
     await session.execute(delete(SiteReadingType))
     await session.execute(delete(Subscription))
     await session.execute(delete(TariffGeneratedRate))
+    await session.execute(delete(ArchiveDynamicOperatingEnvelope))
     await session.execute(delete(DynamicOperatingEnvelope))
     await session.execute(delete(SiteControlGroupDefault))
     await session.execute(delete(SiteControlGroup))
