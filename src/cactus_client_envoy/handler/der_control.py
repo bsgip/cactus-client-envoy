@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Optional
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction
+from envoy.admin.crud.doe import supersede_then_insert_does
 from envoy.notification.manager.notification import NotificationManager
 from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup, SiteControlGroupDefault
 from envoy.server.model.site import Site
@@ -111,12 +112,10 @@ async def create_der_control(
             instruction.parameters.get("rampTms"), divisor=100
         ),  # rampTms is hundredths of seconds; DB stores seconds
     )
-    session.add(doe)
-    await session.flush()
+    await supersede_then_insert_does(session, [doe], now)
     await session.commit()
     logger.info(
-        "create-der-control: created DOE id=%d site_id=%d start=%s end=%s",
-        doe.dynamic_operating_envelope_id,
+        "create-der-control: created DOE site_id=%d start=%s end=%s",
         site.site_id,
         start_time,
         end_time,

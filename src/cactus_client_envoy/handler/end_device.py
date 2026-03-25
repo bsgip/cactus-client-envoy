@@ -94,7 +94,7 @@ async def ensure_end_device(
                 lfdi=client_config.lfdi,
                 sfdi=client_config.sfdi,
                 device_category=device_category,
-                registration_pin=client_config.pin,
+                registration_pin=client_config.pin // 10,  # config holds 6-digit SEP2 PIN; envoy stores 5-digit raw PIN
                 post_rate_seconds=60,
             )
             session.add(site)

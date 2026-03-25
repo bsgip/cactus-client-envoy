@@ -2,10 +2,12 @@ import logging
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from envoy.notification.manager.notification import NotificationManager
+from envoy.server.crud.archive import delete_rows_into_archive
+from envoy.server.model.archive.doe import ArchiveDynamicOperatingEnvelope
 from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup
 from envoy.server.model.site import Site
 from envoy.server.model.subscription import SubscriptionResource
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cactus_client.model.context import AdminContext
@@ -40,10 +42,10 @@ async def ensure_der_control_list(
 async def clear_der_controls(
     instruction: AdminInstruction, context: AdminContext, session: AsyncSession
 ) -> ActionResult:
-    """Cancel active DERControls by superseding them.
+    """Cancel DERControls (both active and scheduled) by archiving them with a deleted_time.
 
-    If all=True, all currently active controls for the client's site are superseded.
-    Otherwise only the most recently started active control is superseded.
+    If all=True, all non-expired non-superseded controls for the client's site are cancelled.
+    Otherwise only the most recently started (or soonest-starting) control is cancelled.
     """
     clear_all: bool = instruction.parameters.get("all", False)
     client_config = resolve_client_config(instruction, context)
@@ -55,43 +57,48 @@ async def clear_der_controls(
         )
 
     now = utc_now()
-    active_filter = (
+    # Include both active (start_time <= now) and scheduled (start_time > now) controls
+    cancel_filter = (
         (DynamicOperatingEnvelope.site_id == site.site_id)
-        & (DynamicOperatingEnvelope.start_time <= now)
         & (DynamicOperatingEnvelope.end_time > now)
         & (DynamicOperatingEnvelope.superseded == False)  # noqa: E712
     )
 
     if clear_all:
-        result = await session.execute(
-            update(DynamicOperatingEnvelope).where(active_filter).values(superseded=True, changed_time=now)
+        await delete_rows_into_archive(
+            session,
+            DynamicOperatingEnvelope,
+            ArchiveDynamicOperatingEnvelope,
+            now,
+            lambda q: q.where(cancel_filter),
         )
-        logger.info("clear-der-controls: superseded %d active control(s) for site_id=%d", result.rowcount, site.site_id)
+        logger.info("clear-der-controls: cancelled all non-expired control(s) for site_id=%d", site.site_id)
     else:
         most_recent = (
             await session.execute(
                 select(DynamicOperatingEnvelope)
-                .where(active_filter)
+                .where(cancel_filter)
                 .order_by(DynamicOperatingEnvelope.start_time.desc())
                 .limit(1)
             )
         ).scalar_one_or_none()
 
         if most_recent is not None:
-            await session.execute(
-                update(DynamicOperatingEnvelope)
-                .where(
-                    DynamicOperatingEnvelope.dynamic_operating_envelope_id == most_recent.dynamic_operating_envelope_id
-                )
-                .values(superseded=True, changed_time=now)
+            doe_id = most_recent.dynamic_operating_envelope_id
+            await delete_rows_into_archive(
+                session,
+                DynamicOperatingEnvelope,
+                ArchiveDynamicOperatingEnvelope,
+                now,
+                lambda q: q.where(DynamicOperatingEnvelope.dynamic_operating_envelope_id == doe_id),
             )
             logger.info(
-                "clear-der-controls: superseded most recent active control id=%d for site_id=%d",
-                most_recent.dynamic_operating_envelope_id,
+                "clear-der-controls: cancelled most recent control id=%d for site_id=%d",
+                doe_id,
                 site.site_id,
             )
         else:
-            logger.info("clear-der-controls: no active controls found for site_id=%d", site.site_id)
+            logger.info("clear-der-controls: no non-expired controls found for site_id=%d", site.site_id)
 
     await session.commit()
     await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.DYNAMIC_OPERATING_ENVELOPE, now)
