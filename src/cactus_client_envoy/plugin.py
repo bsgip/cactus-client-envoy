@@ -1,6 +1,5 @@
 import logging
 import os
-import urllib.parse
 from dataclasses import replace
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction
@@ -8,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from taskiq import InMemoryBroker
 
 import envoy.notification.handler as _nh
-from envoy.notification.handler import STATE_DB_SESSION_MAKER, STATE_HREF_PREFIX
+from envoy.notification.handler import STATE_DB_SESSION_MAKER
 
 from cactus_client.admin.plugins import hookimpl
 from cactus_client.model.context import AdminContext
@@ -48,13 +47,9 @@ class EnvoyAdminPlugin:
         self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False)
         self._fsa_annotations = {}
 
-        parsed = urllib.parse.urlparse(context.server_config.device_capability_uri)
-        href_prefix = f"{parsed.scheme}://{parsed.netloc}"
-
         self._broker = InMemoryBroker()
         await self._broker.startup()
         setattr(self._broker.state, STATE_DB_SESSION_MAKER, self._sessionmaker)
-        setattr(self._broker.state, STATE_HREF_PREFIX, href_prefix)
         _nh._enabled_broker = self._broker
 
         async with self._sessionmaker() as session:
