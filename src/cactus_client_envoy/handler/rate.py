@@ -58,8 +58,13 @@ async def set_post_rate(instruction: AdminInstruction, context: AdminContext, se
 async def _update_runtime_config(session: AsyncSession, field: str, value: int) -> None:
     config = (
         await session.execute(select(RuntimeServerConfig).where(RuntimeServerConfig.runtime_server_config_id == 1))
-    ).scalar_one()
+    ).scalar_one_or_none()
+    now = utc_now()
+    if config is None:
+        config = RuntimeServerConfig(changed_time=now)
+        session.add(config)
+    else:
+        config.changed_time = now
     setattr(config, field, value)
-    config.changed_time = utc_now()
     await session.flush()
     await session.commit()
