@@ -95,7 +95,20 @@ This registers:
 
 ### 5 — Set environment variables
 
-Copy `sample.env` to `.env` in the repo root and fill in your values:
+Copy `sample.env` to `.env` in the repo root:
+
+```bash
+cp cactus-client-envoy/sample.env cactus-client-envoy/.env
+```
+
+Then edit `.env` and fill in the two values:
+
+| Variable | Description | Example |
+|---|---|---|
+| `ENVOY_DB_DSN` | SQLAlchemy async DSN for the Envoy PostgreSQL database | `postgresql+asyncpg://user:pass@localhost:8003/envoy_db` |
+| `DATABASE_URL` | Required by Envoy's model layer — use the same DSN value | `postgresql+asyncpg://user:pass@localhost:8003/envoy_db` |
+
+The actual host, port, user, and password come from `envoy/demo/docker-compose.yaml` (see the `db` service).
 
 
 ### 6 — Run a test

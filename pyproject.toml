@@ -28,7 +28,7 @@ dev = [
     "flake8-bugbear",
     "mypy",
 ]
-test = ["assertical", "pytest", "pytest-asyncio"]
+test = ["assertical", "pytest", "pytest-asyncio", "pytest-cov", "pytest-postgresql", "psycopg[binary]"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
