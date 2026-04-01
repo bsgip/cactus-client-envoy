@@ -14,7 +14,6 @@ from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult
 from cactus_client.time import utc_now
 
-from cactus_client_envoy.handler.common import resolve_client_config
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ async def clear_der_controls(
     Otherwise only the most recently started (or soonest-starting) control is cancelled.
     """
     clear_all: bool = instruction.parameters.get("all", False)
-    client_config = resolve_client_config(instruction, context)
+    client_config = context.client_config_for(instruction.client)
 
     site = (await session.execute(select(Site).where(Site.lfdi == client_config.lfdi))).scalar_one_or_none()
     if site is None:
