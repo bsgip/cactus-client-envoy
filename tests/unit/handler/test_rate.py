@@ -24,9 +24,7 @@ async def test_set_poll_rate_unsupported_resource_returns_failed():
 @pytest.mark.asyncio
 async def test_set_post_rate_unsupported_resource_returns_failed():
     ctx = generate_class_instance(AdminContext)
-    instruction = AdminInstruction(
-        type="set-post-rate", parameters={"resource": "NotARealResource", "rate_seconds": 5}
-    )
+    instruction = AdminInstruction(type="set-post-rate", parameters={"resource": "NotARealResource", "rate_seconds": 5})
     session = AsyncMock()
 
     result = await set_post_rate(instruction, ctx, session)

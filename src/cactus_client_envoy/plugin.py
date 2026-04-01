@@ -74,7 +74,7 @@ class EnvoyAdminPlugin:
     async def admin_instruction(
         self, instruction: AdminInstruction, step: StepExecution, context: AdminContext
     ) -> ActionResult | None:
-        assert self._sessionmaker is not None
+        assert self._sessionmaker is not None  # nosec B101
 
         client_config = resolve_client_config(instruction, context)
         resolved_params = await resolve_variable_expressions_from_parameters(client_config, instruction.parameters)
