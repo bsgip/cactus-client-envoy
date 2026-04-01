@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult
 
-
 logger = logging.getLogger(__name__)
 
 

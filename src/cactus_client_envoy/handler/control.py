@@ -14,7 +14,6 @@ from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult
 from cactus_client.time import utc_now
 
-
 logger = logging.getLogger(__name__)
 
 
