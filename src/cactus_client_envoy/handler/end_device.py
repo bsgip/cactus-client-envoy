@@ -17,7 +17,7 @@ from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult
 from cactus_client.time import utc_now
 
-from cactus_client_envoy.handler.common import find_aggregator_id, resolve_client_config
+from cactus_client_envoy.handler.common import find_aggregator_id
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ async def ensure_end_device(
     has_registration_link: bool | None = instruction.parameters.get("has_registration_link")
     client_type_param: str | None = instruction.parameters.get("client_type")
 
-    client_config = resolve_client_config(instruction, context)
+    client_config = context.client_config_for(instruction.client)
 
     # envoy always includes a RegistrationLink for registered sites (registration_pin is non-nullable)
     if has_registration_link is False:

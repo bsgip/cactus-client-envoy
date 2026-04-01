@@ -16,8 +16,6 @@ from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult
 from cactus_client.time import utc_now
 
-from cactus_client_envoy.handler.common import resolve_client_config
-
 logger = logging.getLogger(__name__)
 
 DEFAULT_DURATION_SECONDS = 8
@@ -34,7 +32,7 @@ async def create_der_control(
     duration_seconds: int = instruction.parameters.get("duration_seconds", DEFAULT_DURATION_SECONDS)
     start_offset_seconds: Optional[int] = instruction.parameters.get("start_offset_seconds")
 
-    client_config = resolve_client_config(instruction, context)
+    client_config = context.client_config_for(instruction.client)
 
     # Look up site by LFDI
     site = (await session.execute(select(Site).where(Site.lfdi == client_config.lfdi))).scalar_one_or_none()
