@@ -79,7 +79,7 @@ cactus server verify true
 cactus server serca ./envoy/demo/tls-termination/test_certs/testca.crt
 ```
 
-Then run `setup_clients.py` to register all three demo clients. It derives LFDIs directly from the certificates:
+Then run `setup_clients.py` to register all demo clients. It derives LFDIs directly from the certificates:
 
 ```bash
 python ./cactus-client-envoy/setup_clients.py ./envoy/demo/tls-termination/test_certs
@@ -95,21 +95,11 @@ This registers:
 
 ### 5 — Set environment variables
 
-Copy `sample.env` to `.env` in the repo root:
-
 ```bash
 cp cactus-client-envoy/sample.env cactus-client-envoy/.env
 ```
 
-Then edit `.env` and fill in the two values:
-
-| Variable | Description | Example |
-|---|---|---|
-| `ENVOY_DB_DSN` | SQLAlchemy async DSN for the Envoy PostgreSQL database | `postgresql+asyncpg://user:pass@localhost:8003/envoy_db` |
-| `DATABASE_URL` | Required by Envoy's model layer — use the same DSN value | `postgresql+asyncpg://user:pass@localhost:8003/envoy_db` |
-
-The actual host, port, user, and password come from `envoy/demo/docker-compose.yaml` (see the `db` service).
-
+`sample.env` contains the correct values for the demo environment — no editing required.
 
 ### 6 — Run a test
 
@@ -118,6 +108,7 @@ cactus tests                           # list all available test procedure IDs
 cactus run S_ALL_01 device1            # run a test with a single device client
 cactus run S_ALL_05 device1 device2    # run a test requiring two clients
 ```
+
 
 Test reports are written to `./cactus-test/`.
 
@@ -129,6 +120,8 @@ Test reports are written to `./cactus-test/`.
 |---|---|---|
 | `ENVOY_DB_DSN` | SQLAlchemy async DSN for the Envoy PostgreSQL database | `postgresql+asyncpg://user:pass@localhost:8003/envoy_db` |
 | `DATABASE_URL` | Required by Envoy's model layer at import time — use the same value | `postgresql+asyncpg://user:pass@localhost:8003/envoy_db` |
+
+Both are pre-configured in `sample.env` for the demo environment.
 
 ## Supported admin instructions
 
