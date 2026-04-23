@@ -88,7 +88,8 @@ class EnvoyAdminPlugin:
                 async with self._sessionmaker() as session:
                     return await ensure_mup_list_empty(instruction, context, session)
             case "ensure-fsa":
-                return await ensure_fsa(instruction, context, self._fsa_annotations)
+                async with self._sessionmaker() as session:
+                    return await ensure_fsa(instruction, context, session, self._fsa_annotations)
             case "ensure-der-program":
                 async with self._sessionmaker() as session:
                     return await ensure_der_program(instruction, context, session, self._fsa_annotations)

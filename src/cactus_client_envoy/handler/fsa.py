@@ -15,21 +15,58 @@ logger = logging.getLogger(__name__)
 
 
 async def ensure_fsa(
-    instruction: AdminInstruction, context: AdminContext, fsa_annotations: dict[str, int]
+    instruction: AdminInstruction, context: AdminContext, session: AsyncSession, fsa_annotations: dict[str, int]
 ) -> ActionResult:
     """Record a FunctionSetAssignment annotation - primacy mapping for use by ensure-der-program.
 
     envoy has no FSA table; the fsa_id field on SiteControlGroup is the only representation of FSA grouping. fsa_id is
     set to the FSA primacy, which MUST be unique across FSAs in a test.
+
+    Creates an initial SiteControlGroup for this FSA (fsa_id=primacy) if none exists, triggering a
+    FUNCTION_SET_ASSIGNMENTS notification so subscription steps waiting on FSA list changes can proceed.
     """
     annotation: str | None = instruction.parameters.get("annotation")
     primacy: int = instruction.parameters.get("primacy", 1)
+    fsa_id = primacy  # fsa_id is always the primacy value
 
     if annotation:
-        fsa_annotations[annotation] = primacy
-        logger.info("ensure-fsa: annotation '%s' → fsa_id=%d (primacy)", annotation, primacy)
+        fsa_annotations[annotation] = fsa_id
+        logger.info("ensure-fsa: annotation '%s' → fsa_id=%d (primacy)", annotation, fsa_id)
     else:
-        logger.info("ensure-fsa: no annotation provided, fsa_id=%d will be used by default", primacy)
+        logger.info("ensure-fsa: no annotation provided, fsa_id=%d will be used by default", fsa_id)
+
+    group = (
+        await session.execute(
+            select(SiteControlGroup).where(
+                (SiteControlGroup.fsa_id == fsa_id) & (SiteControlGroup.primacy == primacy)
+            )
+        )
+    ).scalar_one_or_none()
+
+    if group is None:
+        now = utc_now()
+        group = SiteControlGroup(
+            description=f"cactus-fsa{fsa_id}-primacy-{primacy}", primacy=primacy, fsa_id=fsa_id, changed_time=now
+        )
+        session.add(group)
+        await session.flush()
+        logger.info(
+            "ensure-fsa: created SiteControlGroup fsa_id=%d primacy=%d (id=%d)",
+            fsa_id,
+            primacy,
+            group.site_control_group_id,
+        )
+        await session.commit()
+        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now)
+    else:
+        logger.info(
+            "ensure-fsa: SiteControlGroup already exists fsa_id=%d primacy=%d (id=%d)",
+            fsa_id,
+            primacy,
+            group.site_control_group_id,
+        )
+        await session.commit()
+
     return ActionResult.done()
 
 
@@ -76,6 +113,7 @@ async def ensure_der_program(
         await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.SITE_CONTROL_GROUP, now)
         await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now)
     else:
+        now = utc_now()
         logger.info(
             "ensure-der-program: SiteControlGroup already exists fsa_id=%d primacy=%d (id=%d)",
             fsa_id,
@@ -83,4 +121,6 @@ async def ensure_der_program(
             group.site_control_group_id,
         )
         await session.commit()
+        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.SITE_CONTROL_GROUP, now)
+        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now)
     return ActionResult.done()
