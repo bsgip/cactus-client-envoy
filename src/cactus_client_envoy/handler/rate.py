@@ -1,7 +1,10 @@
 import logging
+from datetime import datetime
 
 from cactus_test_definitions.server.test_procedures import AdminInstruction
+from envoy.notification.manager.notification import NotificationManager
 from envoy.server.model.server import RuntimeServerConfig
+from envoy.server.model.subscription import SubscriptionResource
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +27,13 @@ _POST_RATE_FIELD_MAP: dict[str, str] = {
     "MirrorUsagePointList": "mup_postrate_seconds",
 }
 
+# Mirrors ConfigManager.update_current_config: changing these poll rates triggers notifications
+# for the associated resources so subscribers receive an immediate update.
+_POLL_RATE_NOTIFICATION_MAP: dict[str, SubscriptionResource] = {
+    "EndDeviceList": SubscriptionResource.SITE,
+    "FunctionSetAssignmentsList": SubscriptionResource.FUNCTION_SET_ASSIGNMENTS,
+}
+
 
 async def set_poll_rate(instruction: AdminInstruction, context: AdminContext, session: AsyncSession) -> ActionResult:
     resource: str = instruction.parameters["resource"]
@@ -35,8 +45,13 @@ async def set_poll_rate(instruction: AdminInstruction, context: AdminContext, se
             f"set-poll-rate: unsupported resource '{resource}'. " f"Supported: {list(_POLL_RATE_FIELD_MAP)}"
         )
 
-    await _update_runtime_config(session, field, rate_seconds)
+    now = await _update_runtime_config(session, field, rate_seconds)
     logger.info("set-poll-rate: set %s=%d", field, rate_seconds)
+
+    notification_resource = _POLL_RATE_NOTIFICATION_MAP.get(resource)
+    if notification_resource is not None:
+        await NotificationManager.notify_changed_deleted_entities(notification_resource, now)
+
     return ActionResult.done()
 
 
@@ -55,7 +70,7 @@ async def set_post_rate(instruction: AdminInstruction, context: AdminContext, se
     return ActionResult.done()
 
 
-async def _update_runtime_config(session: AsyncSession, field: str, value: int) -> None:
+async def _update_runtime_config(session: AsyncSession, field: str, value: int) -> datetime:
     config = (
         await session.execute(select(RuntimeServerConfig).where(RuntimeServerConfig.runtime_server_config_id == 1))
     ).scalar_one_or_none()
@@ -68,3 +83,4 @@ async def _update_runtime_config(session: AsyncSession, field: str, value: int) 
     setattr(config, field, value)
     await session.flush()
     await session.commit()
+    return now
