@@ -8,6 +8,7 @@ Usage:
 Run from the directory containing your .cactus.yaml file.
 """
 
+import re
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -15,6 +16,11 @@ from pathlib import Path
 from cactus_client.model.config import ClientConfig, load_config
 from cactus_client.sep2 import convert_lfdi_to_sfdi, lfdi_from_cert_file
 from cactus_test_definitions.server.test_procedures import ClientType
+
+NMI_VALIDATION_VARS = {
+    "NMI_VALIDATION_ENABLED": "true",
+    "NMI_VALIDATION_PARTICIPANT_ID": "ENERGYAP",
+}
 
 
 def make_client(
@@ -67,6 +73,19 @@ def main() -> None:
     print(f"Written {len(clients)} clients to {cfg_path}:")
     for c in clients:
         print(f"  {c.id} ({c.type}): lfdi={c.lfdi}  sfdi={c.sfdi}")
+
+    env_path = Path(".env")
+    env_text = env_path.read_text() if env_path.exists() else ""
+    additions = []
+    for key, value in NMI_VALIDATION_VARS.items():
+        if not re.search(rf"^{key}\s*=", env_text, re.MULTILINE):
+            additions.append(f"{key}={value}")
+    if additions:
+        separator = "\n" if env_text and not env_text.endswith("\n") else ""
+        env_path.write_text(env_text + separator + "\n".join(additions) + "\n")
+        print(f"Added to {env_path}: {', '.join(additions)}")
+    else:
+        print(f"{env_path} already contains NMI validation settings")
 
 
 if __name__ == "__main__":
