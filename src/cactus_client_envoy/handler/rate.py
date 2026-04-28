@@ -32,6 +32,7 @@ _POST_RATE_FIELD_MAP: dict[str, str] = {
 _POLL_RATE_NOTIFICATION_MAP: dict[str, SubscriptionResource] = {
     "EndDeviceList": SubscriptionResource.SITE,
     "FunctionSetAssignmentsList": SubscriptionResource.FUNCTION_SET_ASSIGNMENTS,
+    "DERProgramList": SubscriptionResource.SITE_CONTROL_GROUP,
 }
 
 
