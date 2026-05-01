@@ -80,38 +80,44 @@ class EnvoyAdminPlugin:
         resolved_params = await resolve_variable_expressions_from_parameters(client_config, instruction.parameters)
         instruction = replace(instruction, parameters=resolved_params)
 
+        result: ActionResult | None = None
         match instruction.type:
             case "ensure-end-device":
                 async with self._sessionmaker() as session:
-                    return await ensure_end_device(instruction, context, session)
+                    result = await ensure_end_device(instruction, context, session)
             case "ensure-mup-list-empty":
                 async with self._sessionmaker() as session:
-                    return await ensure_mup_list_empty(instruction, context, session)
+                    result = await ensure_mup_list_empty(instruction, context, session)
             case "ensure-fsa":
                 async with self._sessionmaker() as session:
-                    return await ensure_fsa(instruction, context, session, self._fsa_annotations)
+                    result = await ensure_fsa(instruction, context, session, self._fsa_annotations)
             case "ensure-der-program":
                 async with self._sessionmaker() as session:
-                    return await ensure_der_program(instruction, context, session, self._fsa_annotations)
+                    result = await ensure_der_program(instruction, context, session, self._fsa_annotations)
             case "set-client-access":
                 async with self._sessionmaker() as session:
-                    return await set_client_access(instruction, context, session)
+                    result = await set_client_access(instruction, context, session)
             case "ensure-der-control-list":
                 async with self._sessionmaker() as session:
-                    return await ensure_der_control_list(instruction, context, session)
+                    result = await ensure_der_control_list(instruction, context, session)
             case "create-der-control":
                 async with self._sessionmaker() as session:
-                    return await create_der_control(instruction, context, session)
+                    result = await create_der_control(instruction, context, session)
             case "create-default-der-control":
                 async with self._sessionmaker() as session:
-                    return await create_default_der_control(instruction, context, session)
+                    result = await create_default_der_control(instruction, context, session)
             case "clear-der-controls":
                 async with self._sessionmaker() as session:
-                    return await clear_der_controls(instruction, context, session)
+                    result = await clear_der_controls(instruction, context, session)
             case "set-poll-rate":
                 async with self._sessionmaker() as session:
-                    return await set_poll_rate(instruction, context, session)
+                    result = await set_poll_rate(instruction, context, session)
             case "set-post-rate":
                 async with self._sessionmaker() as session:
-                    return await set_post_rate(instruction, context, session)
-        return None
+                    result = await set_post_rate(instruction, context, session)
+
+        if result is not None and not result.completed:
+            logger.error(
+                "admin-instruction %s failed: %s", instruction.type, result.description
+            )
+        return result
