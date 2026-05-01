@@ -24,7 +24,7 @@ def device_client_config() -> ClientConfig:
         lfdi=DEVICE_LFDI,
         sfdi=123456789,
         pen=28547,
-        pin=123450,
+        pin=123455,
         max_watts=5000,
     )
 
