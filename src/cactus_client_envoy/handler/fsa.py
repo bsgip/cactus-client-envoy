@@ -114,6 +114,7 @@ async def ensure_der_program(
         await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now)
     else:
         now = utc_now()
+        group.changed_time = now
         logger.info(
             "ensure-der-program: SiteControlGroup already exists fsa_id=%d primacy=%d (id=%d)",
             fsa_id,
