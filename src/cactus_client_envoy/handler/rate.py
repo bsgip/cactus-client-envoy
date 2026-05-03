@@ -20,6 +20,7 @@ _POLL_RATE_FIELD_MAP: dict[str, str] = {
     "FunctionSetAssignmentsList": "fsal_pollrate_seconds",
     "DERProgramList": "derpl_pollrate_seconds",
     "DERList": "derl_pollrate_seconds",
+    "MirrorUsagePointList": "mup_postrate_seconds",  # MUP has one rate; envoy exposes it as pollRate in /mup response
 }
 
 _POST_RATE_FIELD_MAP: dict[str, str] = {
