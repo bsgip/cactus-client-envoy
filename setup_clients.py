@@ -22,7 +22,7 @@ def make_client(
     cert_name: str,
     client_type: ClientType,
     certs_dir: Path,
-    pin: int = 12345,
+    pin: int = 123455,
     pen: int = 0,
     max_watts: int = 5000,
 ) -> ClientConfig:
