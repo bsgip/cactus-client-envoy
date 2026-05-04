@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult
 
-from cactus_client_envoy.handler.common import find_aggregator_id, resolve_client_config
+from cactus_client_envoy.handler.common import find_aggregator_id
 from cactus_client_envoy.handler.end_device import delete_site
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ async def set_client_access(
     instruction: AdminInstruction, context: AdminContext, session: AsyncSession
 ) -> ActionResult:
     granted: bool = instruction.parameters["granted"]
-    client_config = resolve_client_config(instruction, context)
+    client_config = context.client_config_for(instruction.client)
 
     if granted:
         cert = (

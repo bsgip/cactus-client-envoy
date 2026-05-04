@@ -1,17 +1,9 @@
-from cactus_test_definitions.server.test_procedures import AdminInstruction
 from envoy.server.model.aggregator import Aggregator, AggregatorCertificateAssignment, NULL_AGGREGATOR_ID
 from envoy.server.model.base import Certificate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cactus_client.model.config import ClientConfig
 from cactus_client.model.context import AdminContext
-
-
-def resolve_client_config(instruction: AdminInstruction, context: AdminContext) -> ClientConfig:
-    if instruction.client is None:
-        return next(iter(context.client_configs.values()))
-    return context.client_configs[instruction.client]
 
 
 async def find_aggregator_id(exclude_lfdi: str, context: AdminContext, session: AsyncSession) -> int | None:
