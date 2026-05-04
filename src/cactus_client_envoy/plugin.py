@@ -27,7 +27,7 @@ from cactus_client_envoy.handler.rate import set_poll_rate, set_post_rate
 ENVOY_DB_DSN_ENV = "ENVOY_DB_DSN"
 ENVOY_ADMIN_URI_ENV = "ENVOY_ADMIN_URI"
 ENVOY_ADMIN_USERNAME_ENV = "ENVOY_ADMIN_USERNAME"
-ENVOY_ADMIN_PASSWORD_ENV = "ENVOY_ADMIN_PASSWORD"
+ENVOY_ADMIN_PASSWORD_ENV = "ENVOY_ADMIN_PASSWORD"  # nosec B105
 
 logger = logging.getLogger(__name__)
 
