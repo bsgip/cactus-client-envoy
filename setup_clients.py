@@ -22,7 +22,7 @@ def make_client(
     cert_name: str,
     client_type: ClientType,
     certs_dir: Path,
-    pin: int = 12345,
+    pin: int = 123455,
     pen: int = 0,
     max_watts: int = 5000,
 ) -> ClientConfig:
@@ -57,6 +57,7 @@ def main() -> None:
         make_client("device1", "testdevice1", ClientType.DEVICE, certs_dir),
         make_client("device2", "testdevice2", ClientType.DEVICE, certs_dir),
         make_client("aggregator1", "testaggregator", ClientType.AGGREGATOR, certs_dir),
+        make_client("aggregator2", "testaggregator2", ClientType.AGGREGATOR, certs_dir),
     ]
 
     cfg, cfg_path = load_config(None)

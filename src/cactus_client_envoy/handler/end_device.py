@@ -43,7 +43,7 @@ async def ensure_end_device(
     )
 
     if is_aggregator:
-        aggregator_id = await _resolve_aggregator_id(client_config.lfdi, session)
+        aggregator_id = await resolve_aggregator_id(client_config.lfdi, session)
         if aggregator_id is None:
             if not registered:
                 logger.info(
@@ -117,13 +117,13 @@ async def ensure_end_device(
         if existing is None:
             logger.info("ensure-end-device: no site found for LFDI %s, nothing to remove", client_config.lfdi)
             return ActionResult.done()
-        await _delete_site(existing.site_id, session)
+        await delete_site(existing.site_id, session)
         await session.commit()
         logger.info("ensure-end-device: deleted site site_id=%s LFDI=%s", existing.site_id, client_config.lfdi)
         return ActionResult.done()
 
 
-async def _delete_site(site_id: int, session: AsyncSession) -> None:
+async def delete_site(site_id: int, session: AsyncSession) -> None:
     """Delete a site and all dependent records that lack ON DELETE CASCADE in the DB schema.
 
     Mirrors delete_site_for_aggregator in envoy.server.crud.site, with two differences:
@@ -152,7 +152,7 @@ async def _delete_site(site_id: int, session: AsyncSession) -> None:
     await session.execute(delete(Site).where(Site.site_id == site_id))
 
 
-async def _resolve_aggregator_id(lfdi: str, session: AsyncSession) -> int | None:
+async def resolve_aggregator_id(lfdi: str, session: AsyncSession) -> int | None:
     """Look up the aggregator_id for an aggregator client LFDI via certificate → aggregator assignment tables."""
     stmt = (
         select(AggregatorCertificateAssignment.aggregator_id)

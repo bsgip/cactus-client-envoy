@@ -3,12 +3,15 @@ from datetime import timedelta
 from decimal import Decimal
 from typing import Optional
 
+import aiohttp
 from cactus_test_definitions.server.test_procedures import AdminInstruction
-from envoy.admin.crud.doe import supersede_then_insert_does
 from envoy.notification.manager.notification import NotificationManager
 from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup, SiteControlGroupDefault
 from envoy.server.model.site import Site
 from envoy.server.model.subscription import SubscriptionResource
+from envoy_schema.admin.schema.site_control import SiteControlRequest
+from envoy_schema.admin.schema.uri import SiteControlUri
+from pydantic import TypeAdapter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,11 +24,16 @@ logger = logging.getLogger(__name__)
 DEFAULT_DURATION_SECONDS = 8
 DEFAULT_SCHEDULED_OFFSET_SECONDS = 2
 
+_site_control_list_adapter: TypeAdapter[list[SiteControlRequest]] = TypeAdapter(list[SiteControlRequest])
+
 
 async def create_der_control(
     instruction: AdminInstruction,
     context: AdminContext,
     session: AsyncSession,
+    admin_uri: str,
+    admin_username: str,
+    admin_password: str,
 ) -> ActionResult:
     status: str = instruction.parameters["status"]  # "active" or "scheduled"
     primacy: int = instruction.parameters.get("primacy", 1)
@@ -51,6 +59,7 @@ async def create_der_control(
         )
         session.add(group)
         await session.flush()
+        await session.commit()
         logger.info(
             "create-der-control: created SiteControlGroup primacy=%d (id=%d)", primacy, group.site_control_group_id
         )
@@ -81,8 +90,6 @@ async def create_der_control(
             else:
                 start_time = now + timedelta(seconds=DEFAULT_SCHEDULED_OFFSET_SECONDS)
 
-    end_time = start_time + timedelta(seconds=duration_seconds)
-
     export_limit = _dec(instruction.parameters.get("opModExpLimW"))
     if export_limit is None and all(
         instruction.parameters.get(k) is None
@@ -90,35 +97,38 @@ async def create_der_control(
     ):
         export_limit = Decimal(0)
 
-    doe = DynamicOperatingEnvelope(
-        site_control_group_id=group.site_control_group_id,
+    request = SiteControlRequest(
         site_id=site.site_id,
-        changed_time=now,
-        start_time=start_time,
+        calculation_log_id=None,
         duration_seconds=duration_seconds,
-        end_time=end_time,
-        superseded=False,
+        start_time=start_time,
         randomize_start_seconds=instruction.parameters.get("randomizeStart_seconds"),
-        import_limit_active_watts=_dec(instruction.parameters.get("opModImpLimW")),
-        export_limit_watts=export_limit,
-        generation_limit_active_watts=_dec(instruction.parameters.get("opModGenLimW")),
-        load_limit_active_watts=_dec(instruction.parameters.get("opModLoadLimW")),
-        set_connected=instruction.parameters.get("opModConnect"),
         set_energized=instruction.parameters.get("opModEnergize"),
+        set_connect=instruction.parameters.get("opModConnect"),
+        import_limit_watts=_dec(instruction.parameters.get("opModImpLimW")),
+        export_limit_watts=export_limit,
+        generation_limit_watts=_dec(instruction.parameters.get("opModGenLimW")),
+        load_limit_watts=_dec(instruction.parameters.get("opModLoadLimW")),
         set_point_percentage=_dec(instruction.parameters.get("opModFixedW")),
-        ramp_time_seconds=_dec(
-            instruction.parameters.get("rampTms"), divisor=100
-        ),  # rampTms is hundredths of seconds; DB stores seconds
+        ramp_time_seconds=_dec(instruction.parameters.get("rampTms"), divisor=100),
     )
-    await supersede_then_insert_does(session, [doe], now)
-    await session.commit()
+
+    url = admin_uri.rstrip("/") + SiteControlUri.format(group_id=group.site_control_group_id)
+    body = _site_control_list_adapter.dump_json([request])
+
+    async with aiohttp.ClientSession(auth=aiohttp.BasicAuth(admin_username, admin_password)) as http_session:
+        async with http_session.post(url, data=body, headers={"Content-Type": "application/json"}) as resp:
+            if resp.status not in (200, 201):
+                text = await resp.text()
+                return ActionResult.failed(
+                    f"create-der-control: admin API POST {url} returned HTTP {resp.status}: {text}"
+                )
+
     logger.info(
-        "create-der-control: created DOE site_id=%d start=%s end=%s",
+        "create-der-control: created SiteControl via admin API for site_id=%d start=%s",
         site.site_id,
         start_time,
-        end_time,
     )
-    await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.DYNAMIC_OPERATING_ENVELOPE, now)
     return ActionResult.done()
 
 
