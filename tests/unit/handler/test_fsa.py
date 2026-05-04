@@ -73,9 +73,7 @@ async def test_ensure_fsa_creates_site_control_group_when_missing():
     fsa_annotations: dict[str, int] = {}
     session = _session_without_group()
 
-    with patch(
-        "cactus_client_envoy.handler.fsa.NotificationManager.notify_changed_deleted_entities"
-    ) as mock_notify:
+    with patch("cactus_client_envoy.handler.fsa.NotificationManager.notify_changed_deleted_entities") as mock_notify:
         mock_notify.return_value = None
         result = await ensure_fsa(instruction, ctx, session, fsa_annotations)
 
@@ -94,9 +92,7 @@ async def test_ensure_fsa_skips_create_when_group_exists():
     fsa_annotations: dict[str, int] = {}
     session = _session_with_existing_group()
 
-    with patch(
-        "cactus_client_envoy.handler.fsa.NotificationManager.notify_changed_deleted_entities"
-    ) as mock_notify:
+    with patch("cactus_client_envoy.handler.fsa.NotificationManager.notify_changed_deleted_entities") as mock_notify:
         result = await ensure_fsa(instruction, ctx, session, fsa_annotations)
 
     assert result.completed
@@ -111,9 +107,7 @@ async def test_ensure_der_program_creates_group_and_notifies():
     fsa_annotations = {"fsa1": 1}
     session = _session_without_group()
 
-    with patch(
-        "cactus_client_envoy.handler.fsa.NotificationManager.notify_changed_deleted_entities"
-    ) as mock_notify:
+    with patch("cactus_client_envoy.handler.fsa.NotificationManager.notify_changed_deleted_entities") as mock_notify:
         mock_notify.return_value = None
         result = await ensure_der_program(instruction, ctx, session, fsa_annotations)
 
@@ -129,9 +123,7 @@ async def test_ensure_der_program_notifies_even_when_group_exists():
     fsa_annotations = {"fsa1": 1}
     session = _session_with_existing_group()
 
-    with patch(
-        "cactus_client_envoy.handler.fsa.NotificationManager.notify_changed_deleted_entities"
-    ) as mock_notify:
+    with patch("cactus_client_envoy.handler.fsa.NotificationManager.notify_changed_deleted_entities") as mock_notify:
         mock_notify.return_value = None
         result = await ensure_der_program(instruction, ctx, session, fsa_annotations)
 

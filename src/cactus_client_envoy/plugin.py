@@ -25,6 +25,9 @@ from cactus_client_envoy.handler.mup import ensure_mup_list_empty
 from cactus_client_envoy.handler.rate import set_poll_rate, set_post_rate
 
 ENVOY_DB_DSN_ENV = "ENVOY_DB_DSN"
+ENVOY_ADMIN_URI_ENV = "ENVOY_ADMIN_URI"
+ENVOY_ADMIN_USERNAME_ENV = "ENVOY_ADMIN_USERNAME"
+ENVOY_ADMIN_PASSWORD_ENV = "ENVOY_ADMIN_PASSWORD"
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +40,9 @@ class EnvoyAdminPlugin:
         self._sessionmaker: async_sessionmaker[AsyncSession] | None = None
         self._broker: InMemoryBroker | None = None
         self._fsa_annotations: dict[str, int] = {}
+        self._admin_uri: str | None = None
+        self._admin_username: str = "admin"
+        self._admin_password: str = "password"
 
     @hookimpl
     async def admin_setup(self, context: AdminContext) -> ActionResult:
@@ -46,6 +52,9 @@ class EnvoyAdminPlugin:
         self._engine = create_async_engine(dsn)
         self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False)
         self._fsa_annotations = {}
+        self._admin_uri = getattr(context.server_config, "admin_uri", None) or os.environ.get(ENVOY_ADMIN_URI_ENV)
+        self._admin_username = os.environ.get(ENVOY_ADMIN_USERNAME_ENV, "admin")
+        self._admin_password = os.environ.get(ENVOY_ADMIN_PASSWORD_ENV, "password")
 
         self._broker = InMemoryBroker()
         await self._broker.startup()
@@ -101,8 +110,16 @@ class EnvoyAdminPlugin:
                 async with self._sessionmaker() as session:
                     result = await ensure_der_control_list(instruction, context, session)
             case "create-der-control":
+                if not self._admin_uri:
+                    logger.error(
+                        "create-der-control: no admin_uri configured — set admin_uri in .cactus.yaml or %s env var",
+                        ENVOY_ADMIN_URI_ENV,
+                    )
+                    return ActionResult.failed("create-der-control: admin_uri is not configured")
                 async with self._sessionmaker() as session:
-                    result = await create_der_control(instruction, context, session)
+                    result = await create_der_control(
+                        instruction, context, session, self._admin_uri, self._admin_username, self._admin_password
+                    )
             case "create-default-der-control":
                 async with self._sessionmaker() as session:
                     result = await create_default_der_control(instruction, context, session)
@@ -117,7 +134,5 @@ class EnvoyAdminPlugin:
                     result = await set_post_rate(instruction, context, session)
 
         if result is not None and not result.completed:
-            logger.error(
-                "admin-instruction %s failed: %s", instruction.type, result.description
-            )
+            logger.error("admin-instruction %s failed: %s", instruction.type, result.description)
         return result

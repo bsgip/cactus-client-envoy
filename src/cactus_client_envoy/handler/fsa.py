@@ -37,9 +37,7 @@ async def ensure_fsa(
 
     group = (
         await session.execute(
-            select(SiteControlGroup).where(
-                (SiteControlGroup.fsa_id == fsa_id) & (SiteControlGroup.primacy == primacy)
-            )
+            select(SiteControlGroup).where((SiteControlGroup.fsa_id == fsa_id) & (SiteControlGroup.primacy == primacy))
         )
     ).scalar_one_or_none()
 

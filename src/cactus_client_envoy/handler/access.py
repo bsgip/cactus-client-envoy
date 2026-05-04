@@ -62,9 +62,7 @@ async def set_client_access(
                 aggregator_id,
             )
     else:
-        site = (
-            await session.execute(select(Site).where(Site.lfdi == client_config.lfdi))
-        ).scalar_one_or_none()
+        site = (await session.execute(select(Site).where(Site.lfdi == client_config.lfdi))).scalar_one_or_none()
         if site is None:
             logger.info("set-client-access: no site found for LFDI %s, nothing to remove", client_config.lfdi)
             return ActionResult.done()
