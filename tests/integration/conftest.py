@@ -5,10 +5,9 @@ from typing import Generator
 import pytest
 from assertical.fixtures.environment import environment_snapshot
 from assertical.fixtures.postgres import generate_async_conn_str_from_connection
-from psycopg import Connection
-
 from envoy.server.alembic import upgrade
 from envoy.server.model.aggregator import NULL_AGGREGATOR_ID
+from psycopg import Connection
 
 
 @pytest.fixture

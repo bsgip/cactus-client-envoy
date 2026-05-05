@@ -2,7 +2,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from assertical.fake.generator import generate_class_instance
-
 from cactus_client.model.context import AdminContext
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 

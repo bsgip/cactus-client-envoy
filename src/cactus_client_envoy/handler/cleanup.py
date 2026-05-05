@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-from envoy.server.model.aggregator import Aggregator, AggregatorDomain, NULL_AGGREGATOR_ID
+from envoy.server.model.aggregator import NULL_AGGREGATOR_ID, Aggregator, AggregatorDomain
 from envoy.server.model.archive.doe import ArchiveDynamicOperatingEnvelope
 from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup, SiteControlGroupDefault
 from envoy.server.model.site import Site
