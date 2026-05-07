@@ -1,6 +1,6 @@
 import os
-from datetime import datetime, timezone
-from typing import Generator
+from collections.abc import Generator
+from datetime import UTC, datetime
 
 import pytest
 from assertical.fixtures.environment import environment_snapshot
@@ -22,8 +22,9 @@ def pg_empty_config(postgresql: Connection) -> Generator[Connection, None, None]
 @pytest.fixture
 def pg_base_config(pg_empty_config: Connection) -> Generator[Connection, None, None]:
     """Extends pg_empty_config by seeding the minimum rows required for handler tests:
-    the null aggregator (aggregator_id=0) that envoy uses as the owner of directly-connected devices."""
-    now = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    the null aggregator (aggregator_id=0) that envoy uses as the owner of directly-connected devices.
+    """
+    now = datetime(2000, 1, 1, tzinfo=UTC)
     with pg_empty_config.cursor() as cur:
         cur.execute(
             "INSERT INTO aggregator (aggregator_id, name, created_time, changed_time) VALUES (%s, %s, %s, %s)",

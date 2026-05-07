@@ -1,10 +1,18 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlparse
 
-from envoy.server.model.aggregator import NULL_AGGREGATOR_ID, Aggregator, AggregatorDomain
+from envoy.server.model.aggregator import (
+    NULL_AGGREGATOR_ID,
+    Aggregator,
+    AggregatorDomain,
+)
 from envoy.server.model.archive.doe import ArchiveDynamicOperatingEnvelope
-from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup, SiteControlGroupDefault
+from envoy.server.model.doe import (
+    DynamicOperatingEnvelope,
+    SiteControlGroup,
+    SiteControlGroupDefault,
+)
 from envoy.server.model.site import Site
 from envoy.server.model.site_reading import SiteReading, SiteReadingType
 from envoy.server.model.subscription import Subscription
@@ -34,7 +42,9 @@ async def reset_test_state(session: AsyncSession) -> None:
     logger.info("reset_test_state: envoy test state cleared")
 
 
-async def ensure_notification_domain_whitelisted(session: AsyncSession, notification_uri: str) -> None:
+async def ensure_notification_domain_whitelisted(
+    session: AsyncSession, notification_uri: str
+) -> None:
     """Add the notification server's hostname to every aggregator's domain whitelist if not already present."""
     hostname = urlparse(notification_uri).hostname
     if not hostname:
@@ -44,22 +54,33 @@ async def ensure_notification_domain_whitelisted(session: AsyncSession, notifica
         return
 
     aggregator_ids = (
-        (await session.execute(select(Aggregator.aggregator_id).where(Aggregator.aggregator_id != NULL_AGGREGATOR_ID)))
+        (
+            await session.execute(
+                select(Aggregator.aggregator_id).where(
+                    Aggregator.aggregator_id != NULL_AGGREGATOR_ID
+                )
+            )
+        )
         .scalars()
         .all()
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for aggregator_id in aggregator_ids:
         existing = (
             await session.execute(
                 select(AggregatorDomain).where(
-                    (AggregatorDomain.aggregator_id == aggregator_id) & (AggregatorDomain.domain == hostname)
+                    (AggregatorDomain.aggregator_id == aggregator_id)
+                    & (AggregatorDomain.domain == hostname)
                 )
             )
         ).scalar_one_or_none()
         if existing is None:
-            session.add(AggregatorDomain(aggregator_id=aggregator_id, domain=hostname, changed_time=now))
+            session.add(
+                AggregatorDomain(
+                    aggregator_id=aggregator_id, domain=hostname, changed_time=now
+                )
+            )
             logger.info(
                 f"ensure_notification_domain_whitelisted: added domain {hostname} for aggregator_id={aggregator_id}"
             )
