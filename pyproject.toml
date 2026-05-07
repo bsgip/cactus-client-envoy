@@ -22,6 +22,7 @@ envoy = "cactus_client_envoy.plugin:EnvoyAdminPlugin"
 [project.optional-dependencies]
 dev = [
     "coverage",
+    "bandit",
     "mypy",
     "ruff",
 ]
@@ -44,34 +45,14 @@ readme = { file = ["README.md"], content-type = "text/markdown" }
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "S", "C90", "B"]
+select = ["E", "W", "F", "I", "S", "C90", "B", "UP", "ANN", "N"]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 15
+max-complexity = 10
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S"]
+"tests/**" = ["S", "ANN", "N"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src/"]
 testpaths = "tests"
-
-[tool.mypy]
-exclude = ["tests", "dist", "build"]
-python_version = "3.12"
-check_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_calls = true
-disallow_untyped_decorators = true
-disallow_untyped_defs = true
-namespace_packages = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-
-[[tool.mypy.overrides]]
-module = ["apluggy", "apluggy.*"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["cactus_client_envoy.plugin"]
-disallow_untyped_decorators = false
