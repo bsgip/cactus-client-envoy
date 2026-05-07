@@ -26,9 +26,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_DURATION_SECONDS = 8
 DEFAULT_SCHEDULED_OFFSET_SECONDS = 2
 
-_site_control_list_adapter: TypeAdapter[list[SiteControlRequest]] = TypeAdapter(
-    list[SiteControlRequest]
-)
+_site_control_list_adapter: TypeAdapter[list[SiteControlRequest]] = TypeAdapter(list[SiteControlRequest])
 
 
 async def create_der_control(
@@ -41,19 +39,13 @@ async def create_der_control(
 ) -> ActionResult:
     status: str = instruction.parameters["status"]  # "active" or "scheduled"
     primacy: int = instruction.parameters.get("primacy", 1)
-    duration_seconds: int = instruction.parameters.get(
-        "duration_seconds", DEFAULT_DURATION_SECONDS
-    )
-    start_offset_seconds: int | None = instruction.parameters.get(
-        "start_offset_seconds"
-    )
+    duration_seconds: int = instruction.parameters.get("duration_seconds", DEFAULT_DURATION_SECONDS)
+    start_offset_seconds: int | None = instruction.parameters.get("start_offset_seconds")
 
     client_config = context.client_config_for(instruction.client)
 
     # Look up site by LFDI
-    site = (
-        await session.execute(select(Site).where(Site.lfdi == client_config.lfdi))
-    ).scalar_one_or_none()
+    site = (await session.execute(select(Site).where(Site.lfdi == client_config.lfdi))).scalar_one_or_none()
     if site is None:
         return ActionResult.failed(
             f"create-der-control: no site found for LFDI {client_config.lfdi} — run ensure-end-device first"
@@ -61,9 +53,7 @@ async def create_der_control(
 
     # Find or create a SiteControlGroup (DERProgram) for the given primacy
     group = (
-        await session.execute(
-            select(SiteControlGroup).where(SiteControlGroup.primacy == primacy)
-        )
+        await session.execute(select(SiteControlGroup).where(SiteControlGroup.primacy == primacy))
     ).scalar_one_or_none()
     if group is None:
         group = SiteControlGroup(
@@ -85,9 +75,7 @@ async def create_der_control(
 
     if status == "active":
         # Start in the past so the control is currently active
-        start_time = now - timedelta(
-            seconds=start_offset_seconds if start_offset_seconds is not None else 1
-        )
+        start_time = now - timedelta(seconds=start_offset_seconds if start_offset_seconds is not None else 1)
     else:
         # "scheduled" — start in the future
         if start_offset_seconds is not None:
@@ -100,10 +88,7 @@ async def create_der_control(
                 await session.execute(
                     select(func.max(DynamicOperatingEnvelope.end_time)).where(
                         (DynamicOperatingEnvelope.site_id == site.site_id)
-                        & (
-                            DynamicOperatingEnvelope.site_control_group_id
-                            == group.site_control_group_id
-                        )
+                        & (DynamicOperatingEnvelope.site_control_group_id == group.site_control_group_id)
                     )
                 )
             ).scalar_one_or_none()
@@ -142,17 +127,11 @@ async def create_der_control(
         ramp_time_seconds=_dec(instruction.parameters.get("rampTms"), divisor=100),
     )
 
-    url = admin_uri.rstrip("/") + SiteControlUri.format(
-        group_id=group.site_control_group_id
-    )
+    url = admin_uri.rstrip("/") + SiteControlUri.format(group_id=group.site_control_group_id)
     body = _site_control_list_adapter.dump_json([request])
 
-    async with aiohttp.ClientSession(
-        auth=aiohttp.BasicAuth(admin_username, admin_password)
-    ) as http_session:
-        async with http_session.post(
-            url, data=body, headers={"Content-Type": "application/json"}
-        ) as resp:
+    async with aiohttp.ClientSession(auth=aiohttp.BasicAuth(admin_username, admin_password)) as http_session:
+        async with http_session.post(url, data=body, headers={"Content-Type": "application/json"}) as resp:
             if resp.status not in (200, 201):
                 text = await resp.text()
                 return ActionResult.failed(
@@ -176,9 +155,7 @@ async def create_default_der_control(
 
     # Find or create a SiteControlGroup (DERProgram) for the given primacy
     group = (
-        await session.execute(
-            select(SiteControlGroup).where(SiteControlGroup.primacy == primacy)
-        )
+        await session.execute(select(SiteControlGroup).where(SiteControlGroup.primacy == primacy))
     ).scalar_one_or_none()
     if group is None:
         group = SiteControlGroup(
@@ -198,26 +175,17 @@ async def create_default_der_control(
     existing = (
         await session.execute(
             select(SiteControlGroupDefault).where(
-                SiteControlGroupDefault.site_control_group_id
-                == group.site_control_group_id
+                SiteControlGroupDefault.site_control_group_id == group.site_control_group_id
             )
         )
     ).scalar_one_or_none()
 
     now = utc_now()
     if existing is not None:
-        existing.import_limit_active_watts = _dec(
-            instruction.parameters.get("opModImpLimW")
-        )
-        existing.export_limit_active_watts = _dec(
-            instruction.parameters.get("opModExpLimW")
-        )
-        existing.generation_limit_active_watts = _dec(
-            instruction.parameters.get("opModGenLimW")
-        )
-        existing.load_limit_active_watts = _dec(
-            instruction.parameters.get("opModLoadLimW")
-        )
+        existing.import_limit_active_watts = _dec(instruction.parameters.get("opModImpLimW"))
+        existing.export_limit_active_watts = _dec(instruction.parameters.get("opModExpLimW"))
+        existing.generation_limit_active_watts = _dec(instruction.parameters.get("opModGenLimW"))
+        existing.load_limit_active_watts = _dec(instruction.parameters.get("opModLoadLimW"))
         existing.ramp_rate_percent_per_second = instruction.parameters.get("setGradW")
         existing.version += 1
         existing.changed_time = now
@@ -232,9 +200,7 @@ async def create_default_der_control(
             changed_time=now,
             import_limit_active_watts=_dec(instruction.parameters.get("opModImpLimW")),
             export_limit_active_watts=_dec(instruction.parameters.get("opModExpLimW")),
-            generation_limit_active_watts=_dec(
-                instruction.parameters.get("opModGenLimW")
-            ),
+            generation_limit_active_watts=_dec(instruction.parameters.get("opModGenLimW")),
             load_limit_active_watts=_dec(instruction.parameters.get("opModLoadLimW")),
             ramp_rate_percent_per_second=instruction.parameters.get("setGradW"),
         )
@@ -246,9 +212,7 @@ async def create_default_der_control(
 
     await session.flush()
     await session.commit()
-    await NotificationManager.notify_changed_deleted_entities(
-        SubscriptionResource.DEFAULT_SITE_CONTROL, now
-    )
+    await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.DEFAULT_SITE_CONTROL, now)
     return ActionResult.done()
 
 

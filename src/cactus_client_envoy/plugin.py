@@ -51,21 +51,17 @@ class EnvoyAdminPlugin:
         self._fsa_annotations: dict[str, int] = {}
         self._admin_uri: str | None = None
         self._admin_username: str = "admin"
-        self._admin_password: str = "password" 
+        self._admin_password: str = "password"  # noqa: S105
 
     @hookimpl
     async def admin_setup(self, context: AdminContext) -> ActionResult:
         dsn = os.environ.get(ENVOY_DB_DSN_ENV)
         if not dsn:
-            return ActionResult.failed(
-                f"{ENVOY_DB_DSN_ENV} environment variable is not set."
-            )
+            return ActionResult.failed(f"{ENVOY_DB_DSN_ENV} environment variable is not set.")
         self._engine = create_async_engine(dsn)
         self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False)
         self._fsa_annotations = {}
-        self._admin_uri = getattr(
-            context.server_config, "admin_uri", None
-        ) or os.environ.get(ENVOY_ADMIN_URI_ENV)
+        self._admin_uri = getattr(context.server_config, "admin_uri", None) or os.environ.get(ENVOY_ADMIN_URI_ENV)
         self._admin_username = os.environ.get(ENVOY_ADMIN_USERNAME_ENV, "admin")
         self._admin_password = os.environ.get(ENVOY_ADMIN_PASSWORD_ENV, "password")
 
@@ -77,9 +73,7 @@ class EnvoyAdminPlugin:
         async with self._sessionmaker() as session:
             await reset_test_state(session)
             if context.server_config.notification_uri:
-                await ensure_notification_domain_whitelisted(
-                    session, context.server_config.notification_uri
-                )
+                await ensure_notification_domain_whitelisted(session, context.server_config.notification_uri)
         return ActionResult.done()
 
     @hookimpl
@@ -98,7 +92,8 @@ class EnvoyAdminPlugin:
     async def admin_instruction(  # noqa C901
         self, instruction: AdminInstruction, step: StepExecution, context: AdminContext
     ) -> ActionResult | None:
-        assert self._sessionmaker is not None  # nosec B101
+        if self._sessionmaker is None:
+            return ActionResult.failed("admin_setup has not been called")
 
         result: ActionResult | None = None
         match instruction.type:
@@ -110,31 +105,23 @@ class EnvoyAdminPlugin:
                     result = await ensure_mup_list_empty(instruction, context, session)
             case "ensure-fsa":
                 async with self._sessionmaker() as session:
-                    result = await ensure_fsa(
-                        instruction, context, session, self._fsa_annotations
-                    )
+                    result = await ensure_fsa(instruction, context, session, self._fsa_annotations)
             case "ensure-der-program":
                 async with self._sessionmaker() as session:
-                    result = await ensure_der_program(
-                        instruction, context, session, self._fsa_annotations
-                    )
+                    result = await ensure_der_program(instruction, context, session, self._fsa_annotations)
             case "set-client-access":
                 async with self._sessionmaker() as session:
                     result = await set_client_access(instruction, context, session)
             case "ensure-der-control-list":
                 async with self._sessionmaker() as session:
-                    result = await ensure_der_control_list(
-                        instruction, context, session
-                    )
+                    result = await ensure_der_control_list(instruction, context, session)
             case "create-der-control":
                 if not self._admin_uri:
                     logger.error(
                         "create-der-control: no admin_uri configured — set admin_uri in .cactus.yaml or %s env var",
                         ENVOY_ADMIN_URI_ENV,
                     )
-                    return ActionResult.failed(
-                        "create-der-control: admin_uri is not configured"
-                    )
+                    return ActionResult.failed("create-der-control: admin_uri is not configured")
                 async with self._sessionmaker() as session:
                     result = await create_der_control(
                         instruction,
@@ -146,9 +133,7 @@ class EnvoyAdminPlugin:
                     )
             case "create-default-der-control":
                 async with self._sessionmaker() as session:
-                    result = await create_default_der_control(
-                        instruction, context, session
-                    )
+                    result = await create_default_der_control(instruction, context, session)
             case "clear-der-controls":
                 async with self._sessionmaker() as session:
                     result = await clear_der_controls(instruction, context, session)
@@ -160,7 +145,5 @@ class EnvoyAdminPlugin:
                     result = await set_post_rate(instruction, context, session)
 
         if result is not None and not result.completed:
-            logger.error(
-                "admin-instruction %s failed: %s", instruction.type, result.description
-            )
+            logger.error("admin-instruction %s failed: %s", instruction.type, result.description)
         return result
