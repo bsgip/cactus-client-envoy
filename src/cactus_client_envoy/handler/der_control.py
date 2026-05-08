@@ -1,12 +1,18 @@
 import logging
 from datetime import timedelta
 from decimal import Decimal
-from typing import Optional
 
 import aiohttp
+from cactus_client.model.context import AdminContext
+from cactus_client.model.execution import ActionResult
+from cactus_client.time import utc_now
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from envoy.notification.manager.notification import NotificationManager
-from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup, SiteControlGroupDefault
+from envoy.server.model.doe import (
+    DynamicOperatingEnvelope,
+    SiteControlGroup,
+    SiteControlGroupDefault,
+)
 from envoy.server.model.site import Site
 from envoy.server.model.subscription import SubscriptionResource
 from envoy_schema.admin.schema.site_control import SiteControlRequest
@@ -14,10 +20,6 @@ from envoy_schema.admin.schema.uri import SiteControlUri
 from pydantic import TypeAdapter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from cactus_client.model.context import AdminContext
-from cactus_client.model.execution import ActionResult
-from cactus_client.time import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,7 @@ async def create_der_control(
     status: str = instruction.parameters["status"]  # "active" or "scheduled"
     primacy: int = instruction.parameters.get("primacy", 1)
     duration_seconds: int = instruction.parameters.get("duration_seconds", DEFAULT_DURATION_SECONDS)
-    start_offset_seconds: Optional[int] = instruction.parameters.get("start_offset_seconds")
+    start_offset_seconds: int | None = instruction.parameters.get("start_offset_seconds")
 
     client_config = context.client_config_for(instruction.client)
 
@@ -55,13 +57,18 @@ async def create_der_control(
     ).scalar_one_or_none()
     if group is None:
         group = SiteControlGroup(
-            description=f"cactus-primacy-{primacy}", primacy=primacy, fsa_id=1, changed_time=utc_now()
+            description=f"cactus-primacy-{primacy}",
+            primacy=primacy,
+            fsa_id=1,
+            changed_time=utc_now(),
         )
         session.add(group)
         await session.flush()
         await session.commit()
         logger.info(
-            "create-der-control: created SiteControlGroup primacy=%d (id=%d)", primacy, group.site_control_group_id
+            "create-der-control: created SiteControlGroup primacy=%d (id=%d)",
+            primacy,
+            group.site_control_group_id,
         )
 
     now = utc_now()
@@ -93,7 +100,14 @@ async def create_der_control(
     export_limit = _dec(instruction.parameters.get("opModExpLimW"))
     if export_limit is None and all(
         instruction.parameters.get(k) is None
-        for k in ("opModImpLimW", "opModGenLimW", "opModLoadLimW", "opModConnect", "opModEnergize", "opModFixedW")
+        for k in (
+            "opModImpLimW",
+            "opModGenLimW",
+            "opModLoadLimW",
+            "opModConnect",
+            "opModEnergize",
+            "opModFixedW",
+        )
     ):
         export_limit = Decimal(0)
 
@@ -145,7 +159,10 @@ async def create_default_der_control(
     ).scalar_one_or_none()
     if group is None:
         group = SiteControlGroup(
-            description=f"cactus-primacy-{primacy}", primacy=primacy, fsa_id=1, changed_time=utc_now()
+            description=f"cactus-primacy-{primacy}",
+            primacy=primacy,
+            fsa_id=1,
+            changed_time=utc_now(),
         )
         session.add(group)
         await session.flush()
@@ -199,5 +216,5 @@ async def create_default_der_control(
     return ActionResult.done()
 
 
-def _dec(value: Optional[float], divisor: int = 1) -> Optional[Decimal]:
+def _dec(value: float | None, divisor: int = 1) -> Decimal | None:
     return Decimal(str(value)) / divisor if value is not None else None

@@ -1,13 +1,12 @@
 import logging
 
+from cactus_client.model.context import AdminContext
+from cactus_client.model.execution import ActionResult
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from envoy.server.model.site import Site
 from envoy.server.model.site_reading import SiteReading, SiteReadingType
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from cactus_client.model.context import AdminContext
-from cactus_client.model.execution import ActionResult
 
 logger = logging.getLogger(__name__)
 

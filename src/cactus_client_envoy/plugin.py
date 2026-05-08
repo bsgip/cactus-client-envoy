@@ -1,21 +1,33 @@
 import logging
 import os
 
-from cactus_test_definitions.server.test_procedures import AdminInstruction
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from taskiq import InMemoryBroker
-
 import envoy.notification.handler as _nh
-from envoy.notification.handler import STATE_DB_SESSION_MAKER
-
 from cactus_client.admin.plugins import hookimpl
 from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult, StepExecution
+from cactus_test_definitions.server.test_procedures import AdminInstruction
+from envoy.notification.handler import STATE_DB_SESSION_MAKER
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from taskiq import InMemoryBroker
 
 from cactus_client_envoy.handler.access import set_client_access
-from cactus_client_envoy.handler.cleanup import ensure_notification_domain_whitelisted, reset_test_state
-from cactus_client_envoy.handler.control import clear_der_controls, ensure_der_control_list
-from cactus_client_envoy.handler.der_control import create_default_der_control, create_der_control
+from cactus_client_envoy.handler.cleanup import (
+    ensure_notification_domain_whitelisted,
+    reset_test_state,
+)
+from cactus_client_envoy.handler.control import (
+    clear_der_controls,
+    ensure_der_control_list,
+)
+from cactus_client_envoy.handler.der_control import (
+    create_default_der_control,
+    create_der_control,
+)
 from cactus_client_envoy.handler.end_device import ensure_end_device
 from cactus_client_envoy.handler.fsa import ensure_der_program, ensure_fsa
 from cactus_client_envoy.handler.mup import ensure_mup_list_empty
@@ -24,7 +36,7 @@ from cactus_client_envoy.handler.rate import set_poll_rate, set_post_rate
 ENVOY_DB_DSN_ENV = "ENVOY_DB_DSN"
 ENVOY_ADMIN_URI_ENV = "ENVOY_ADMIN_URI"
 ENVOY_ADMIN_USERNAME_ENV = "ENVOY_ADMIN_USERNAME"
-ENVOY_ADMIN_PASSWORD_ENV = "ENVOY_ADMIN_PASSWORD"  # nosec B105
+ENVOY_ADMIN_PASSWORD_ENV = "ENVOY_ADMIN_PASSWORD"  # nosec B105, # noqa S109
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +51,7 @@ class EnvoyAdminPlugin:
         self._fsa_annotations: dict[str, int] = {}
         self._admin_uri: str | None = None
         self._admin_username: str = "admin"
-        self._admin_password: str = "password"
+        self._admin_password: str = "password"  # noqa: S105
 
     @hookimpl
     async def admin_setup(self, context: AdminContext) -> ActionResult:
@@ -77,10 +89,11 @@ class EnvoyAdminPlugin:
         return ActionResult.done()
 
     @hookimpl
-    async def admin_instruction(
+    async def admin_instruction(  # noqa C901
         self, instruction: AdminInstruction, step: StepExecution, context: AdminContext
     ) -> ActionResult | None:
-        assert self._sessionmaker is not None  # nosec B101
+        if self._sessionmaker is None:
+            return ActionResult.failed("admin_setup has not been called")
 
         result: ActionResult | None = None
         match instruction.type:
@@ -111,7 +124,12 @@ class EnvoyAdminPlugin:
                     return ActionResult.failed("create-der-control: admin_uri is not configured")
                 async with self._sessionmaker() as session:
                     result = await create_der_control(
-                        instruction, context, session, self._admin_uri, self._admin_username, self._admin_password
+                        instruction,
+                        context,
+                        session,
+                        self._admin_uri,
+                        self._admin_username,
+                        self._admin_password,
                     )
             case "create-default-der-control":
                 async with self._sessionmaker() as session:

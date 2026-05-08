@@ -1,14 +1,13 @@
 import logging
 
+from cactus_client.model.context import AdminContext
+from cactus_client.model.execution import ActionResult
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from envoy.server.model.aggregator import AggregatorCertificateAssignment
 from envoy.server.model.base import Certificate
 from envoy.server.model.site import Site
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from cactus_client.model.context import AdminContext
-from cactus_client.model.execution import ActionResult
 
 from cactus_client_envoy.handler.common import find_aggregator_id
 from cactus_client_envoy.handler.end_device import delete_site
