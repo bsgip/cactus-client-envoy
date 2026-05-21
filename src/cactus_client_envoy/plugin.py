@@ -1,6 +1,7 @@
 import logging
 import os
 
+from cactus_test_definitions.server.admin_instructions import AdminInstructionType
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from taskiq import InMemoryBroker
@@ -49,9 +50,13 @@ class EnvoyAdminPlugin:
         self._engine = create_async_engine(dsn)
         self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False)
         self._fsa_annotations = {}
-        self._admin_uri = getattr(context.server_config, "admin_uri", None) or os.environ.get(ENVOY_ADMIN_URI_ENV)
+        self._admin_uri = os.environ.get(ENVOY_ADMIN_URI_ENV)
         self._admin_username = os.environ.get(ENVOY_ADMIN_USERNAME_ENV, "admin")
         self._admin_password = os.environ.get(ENVOY_ADMIN_PASSWORD_ENV, "password")
+        if not self._admin_uri:
+            return ActionResult.failed(
+                f"admin_uri is not configured — set admin_uri in .cactus.yaml or {ENVOY_ADMIN_URI_ENV} env var"
+            )
 
         self._broker = InMemoryBroker()
         await self._broker.startup()
@@ -82,48 +87,31 @@ class EnvoyAdminPlugin:
     ) -> ActionResult | None:
         assert self._sessionmaker is not None  # nosec B101
 
-        result: ActionResult | None = None
-        match instruction.type:
-            case "ensure-end-device":
-                async with self._sessionmaker() as session:
+        async with self._sessionmaker() as session:
+            match instruction.type:
+                case AdminInstructionType.ENSURE_END_DEVICE:
                     result = await ensure_end_device(instruction, context, session)
-            case "ensure-mup-list-empty":
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.ENSURE_MUP_LIST_EMPTY:
                     result = await ensure_mup_list_empty(instruction, context, session)
-            case "ensure-fsa":
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.ENSURE_FSA:
                     result = await ensure_fsa(instruction, context, session, self._fsa_annotations)
-            case "ensure-der-program":
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.ENSURE_DER_PROGRAM:
                     result = await ensure_der_program(instruction, context, session, self._fsa_annotations)
-            case "set-client-access":
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.SET_CLIENT_ACCESS:
                     result = await set_client_access(instruction, context, session)
-            case "ensure-der-control-list":
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.ENSURE_DER_CONTROL_LIST:
                     result = await ensure_der_control_list(instruction, context, session)
-            case "create-der-control":
-                if not self._admin_uri:
-                    logger.error(
-                        "create-der-control: no admin_uri configured — set admin_uri in .cactus.yaml or %s env var",
-                        ENVOY_ADMIN_URI_ENV,
-                    )
-                    return ActionResult.failed("create-der-control: admin_uri is not configured")
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.CREATE_DER_CONTROL:
                     result = await create_der_control(
-                        instruction, context, session, self._admin_uri, self._admin_username, self._admin_password
+                        instruction, context, session, self._admin_uri, self._admin_username, self._admin_password  # type: ignore[arg-type]
                     )
-            case "create-default-der-control":
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.CREATE_DEFAULT_DER_CONTROL:
                     result = await create_default_der_control(instruction, context, session)
-            case "clear-der-controls":
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.CLEAR_DER_CONTROLS:
                     result = await clear_der_controls(instruction, context, session)
-            case "set-poll-rate":
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.SET_POLL_RATE:
                     result = await set_poll_rate(instruction, context, session)
-            case "set-post-rate":
-                async with self._sessionmaker() as session:
+                case AdminInstructionType.SET_POST_RATE:
                     result = await set_post_rate(instruction, context, session)
 
         if result is not None and not result.completed:
