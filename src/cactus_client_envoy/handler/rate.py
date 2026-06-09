@@ -1,16 +1,15 @@
 import logging
 from datetime import datetime
 
+from cactus_client.model.context import AdminContext
+from cactus_client.model.execution import ActionResult
+from cactus_client.time import utc_now
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from envoy.notification.manager.notification import NotificationManager
 from envoy.server.model.server import RuntimeServerConfig
 from envoy.server.model.subscription import SubscriptionResource
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from cactus_client.model.context import AdminContext
-from cactus_client.model.execution import ActionResult
-from cactus_client.time import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,7 @@ async def set_poll_rate(instruction: AdminInstruction, context: AdminContext, se
     field = _POLL_RATE_FIELD_MAP.get(resource)
     if field is None:
         return ActionResult.failed(
-            f"set-poll-rate: unsupported resource '{resource}'. " f"Supported: {list(_POLL_RATE_FIELD_MAP)}"
+            f"set-poll-rate: unsupported resource '{resource}'. Supported: {list(_POLL_RATE_FIELD_MAP)}"
         )
 
     now = await _update_runtime_config(session, field, rate_seconds)
@@ -64,7 +63,7 @@ async def set_post_rate(instruction: AdminInstruction, context: AdminContext, se
     field = _POST_RATE_FIELD_MAP.get(resource)
     if field is None:
         return ActionResult.failed(
-            f"set-post-rate: unsupported resource '{resource}'. " f"Supported: {list(_POST_RATE_FIELD_MAP)}"
+            f"set-post-rate: unsupported resource '{resource}'. Supported: {list(_POST_RATE_FIELD_MAP)}"
         )
 
     await _update_runtime_config(session, field, rate_seconds)

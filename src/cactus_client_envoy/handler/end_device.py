@@ -1,5 +1,8 @@
 import logging
 
+from cactus_client.model.context import AdminContext
+from cactus_client.model.execution import ActionResult
+from cactus_client.time import utc_now
 from cactus_test_definitions.server.test_procedures import AdminInstruction, ClientType
 from envoy.notification.manager.notification import NotificationManager
 from envoy.server.model.aggregator import AggregatorCertificateAssignment
@@ -24,7 +27,7 @@ from cactus_client_envoy.handler.common import find_aggregator_id
 logger = logging.getLogger(__name__)
 
 
-async def ensure_end_device(
+async def ensure_end_device(  # noqa C901
     instruction: AdminInstruction, context: AdminContext, session: AsyncSession
 ) -> ActionResult:
     registered: bool = instruction.parameters["registered"]
@@ -104,11 +107,17 @@ async def ensure_end_device(
             )
             session.add(site)
             await session.flush()
-            logger.info("ensure-end-device: registered site for LFDI %s (site_id=%s)", client_config.lfdi, site.site_id)
+            logger.info(
+                "ensure-end-device: registered site for LFDI %s (site_id=%s)",
+                client_config.lfdi,
+                site.site_id,
+            )
         else:
             site = existing
             logger.info(
-                "ensure-end-device: site already exists for LFDI %s (site_id=%s)", client_config.lfdi, site.site_id
+                "ensure-end-device: site already exists for LFDI %s (site_id=%s)",
+                client_config.lfdi,
+                site.site_id,
             )
 
         if has_der_list:
@@ -120,11 +129,18 @@ async def ensure_end_device(
         return ActionResult.done()
     else:
         if existing is None:
-            logger.info("ensure-end-device: no site found for LFDI %s, nothing to remove", client_config.lfdi)
+            logger.info(
+                "ensure-end-device: no site found for LFDI %s, nothing to remove",
+                client_config.lfdi,
+            )
             return ActionResult.done()
         await delete_site(existing.site_id, session)
         await session.commit()
-        logger.info("ensure-end-device: deleted site site_id=%s LFDI=%s", existing.site_id, client_config.lfdi)
+        logger.info(
+            "ensure-end-device: deleted site site_id=%s LFDI=%s",
+            existing.site_id,
+            client_config.lfdi,
+        )
         return ActionResult.done()
 
 
@@ -161,7 +177,10 @@ async def resolve_aggregator_id(lfdi: str, session: AsyncSession) -> int | None:
     """Look up the aggregator_id for an aggregator client LFDI via certificate → aggregator assignment tables."""
     stmt = (
         select(AggregatorCertificateAssignment.aggregator_id)
-        .join(Certificate, Certificate.certificate_id == AggregatorCertificateAssignment.certificate_id)
+        .join(
+            Certificate,
+            Certificate.certificate_id == AggregatorCertificateAssignment.certificate_id,
+        )
         .where(Certificate.lfdi == lfdi.lower())
         .limit(1)
     )

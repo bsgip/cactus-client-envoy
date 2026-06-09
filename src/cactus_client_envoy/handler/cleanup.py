@@ -1,10 +1,18 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlparse
 
-from envoy.server.model.aggregator import Aggregator, AggregatorDomain, NULL_AGGREGATOR_ID
+from envoy.server.model.aggregator import (
+    NULL_AGGREGATOR_ID,
+    Aggregator,
+    AggregatorDomain,
+)
 from envoy.server.model.archive.doe import ArchiveDynamicOperatingEnvelope
-from envoy.server.model.doe import DynamicOperatingEnvelope, SiteControlGroup, SiteControlGroupDefault
+from envoy.server.model.doe import (
+    DynamicOperatingEnvelope,
+    SiteControlGroup,
+    SiteControlGroupDefault,
+)
 from envoy.server.model.site import Site
 from envoy.server.model.site_reading import SiteReading, SiteReadingType
 from envoy.server.model.subscription import Subscription
@@ -49,7 +57,7 @@ async def ensure_notification_domain_whitelisted(session: AsyncSession, notifica
         .all()
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for aggregator_id in aggregator_ids:
         existing = (
             await session.execute(

@@ -1,5 +1,7 @@
 import logging
 
+from cactus_client.model.context import AdminContext
+from cactus_client.model.execution import ActionResult
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from envoy.server.model.aggregator import AggregatorCertificateAssignment
 from envoy.server.model.base import Certificate

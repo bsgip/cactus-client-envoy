@@ -1,4 +1,5 @@
-from envoy.server.model.aggregator import Aggregator, AggregatorCertificateAssignment, NULL_AGGREGATOR_ID
+from cactus_client.model.context import AdminContext
+from envoy.server.model.aggregator import NULL_AGGREGATOR_ID, Aggregator, AggregatorCertificateAssignment
 from envoy.server.model.base import Certificate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
