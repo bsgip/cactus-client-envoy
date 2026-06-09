@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult
 
+from cactus_client.sep2 import lfdi_from_cert_file
+
 from cactus_client_envoy.handler.common import find_aggregator_id
 from cactus_client_envoy.handler.end_device import delete_site
 
@@ -21,18 +23,20 @@ async def set_client_access(
 ) -> ActionResult:
     granted: bool = instruction.parameters["granted"]
     client_config = context.client_config_for(instruction.client)
+    # Certificate/aggregator identity comes from the cert itself; client_config.lfdi is the managed Site LFDI.
+    cert_lfdi = lfdi_from_cert_file(client_config.certificate_file)
 
     if granted:
         cert = (
-            await session.execute(select(Certificate).where(Certificate.lfdi == client_config.lfdi.lower()))
+            await session.execute(select(Certificate).where(Certificate.lfdi == cert_lfdi.lower()))
         ).scalar_one_or_none()
         if cert is None:
             return ActionResult.failed(
-                f"set-client-access: no certificate found for LFDI {client_config.lfdi} — "
+                f"set-client-access: no certificate found for cert LFDI {cert_lfdi} — "
                 "is the certificate registered in the envoy DB?"
             )
 
-        aggregator_id = await find_aggregator_id(client_config.lfdi, context, session)
+        aggregator_id = await find_aggregator_id(cert_lfdi, context, session)
         if aggregator_id is None:
             return ActionResult.failed(
                 "set-client-access: cannot determine which aggregator to grant access to — "
@@ -72,7 +76,7 @@ async def set_client_access(
 
         # Also clean up any aggregator cert assignment (aggregator-type clients only)
         cert = (
-            await session.execute(select(Certificate).where(Certificate.lfdi == client_config.lfdi.lower()))
+            await session.execute(select(Certificate).where(Certificate.lfdi == cert_lfdi.lower()))
         ).scalar_one_or_none()
         if cert is not None:
             await session.execute(

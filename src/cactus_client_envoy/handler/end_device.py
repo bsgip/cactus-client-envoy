@@ -17,6 +17,8 @@ from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult
 from cactus_client.time import utc_now
 
+from cactus_client.sep2 import lfdi_from_cert_file
+
 from cactus_client_envoy.handler.common import find_aggregator_id
 
 logger = logging.getLogger(__name__)
@@ -43,23 +45,26 @@ async def ensure_end_device(
     )
 
     if is_aggregator:
-        aggregator_id = await resolve_aggregator_id(client_config.lfdi, session)
+        # The aggregator is identified in envoy by its *certificate* LFDI, which is distinct from the
+        # managed EndDevice LFDI in client_config.lfdi (the latter becomes the registered Site below).
+        cert_lfdi = lfdi_from_cert_file(client_config.certificate_file)
+        aggregator_id = await resolve_aggregator_id(cert_lfdi, session)
         if aggregator_id is None:
             if not registered:
                 logger.info(
-                    "ensure-end-device: no aggregator assignment found for LFDI %s, nothing to remove",
-                    client_config.lfdi,
+                    "ensure-end-device: no aggregator assignment found for cert LFDI %s, nothing to remove",
+                    cert_lfdi,
                 )
                 return ActionResult.done()
             cert = (
-                await session.execute(select(Certificate).where(Certificate.lfdi == client_config.lfdi.lower()))
+                await session.execute(select(Certificate).where(Certificate.lfdi == cert_lfdi.lower()))
             ).scalar_one_or_none()
             if cert is None:
                 return ActionResult.failed(
-                    f"ensure-end-device: no certificate found for LFDI {client_config.lfdi} — "
+                    f"ensure-end-device: no certificate found for cert LFDI {cert_lfdi} — "
                     "ensure the certificate is registered in the envoy DB."
                 )
-            aggregator_id = await find_aggregator_id(client_config.lfdi, context, session)
+            aggregator_id = await find_aggregator_id(cert_lfdi, context, session)
             if aggregator_id is None:
                 return ActionResult.failed(
                     "ensure-end-device: cannot determine which aggregator to assign — "
@@ -70,8 +75,8 @@ async def ensure_end_device(
             )
             await session.flush()
             logger.info(
-                "ensure-end-device: granted aggregator access for LFDI %s to aggregator_id=%d",
-                client_config.lfdi,
+                "ensure-end-device: granted aggregator access for cert LFDI %s to aggregator_id=%d",
+                cert_lfdi,
                 aggregator_id,
             )
         device_category = DeviceCategory.VIRTUAL_OR_MIXED_DER
