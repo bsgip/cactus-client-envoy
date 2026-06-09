@@ -364,7 +364,7 @@ wheels = [
 
 [[package]]
 name = "cactus-client"
-version = "1.1.0"
+version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -381,9 +381,9 @@ dependencies = [
     { name = "treelib" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2a/36/5f4f57862ed71318e8ba972748cb4cca0fae69d30c60ea7f8865bc50d078/cactus_client-1.1.0.tar.gz", hash = "sha256:eaa145bf93f878d364c7159e4e46fd77d8ef22901df3824cd3959b58ecd51ff4", size = 141928, upload-time = "2026-05-12T06:30:47.264Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/05/9d07e04d56fb0cb99c6193b6486ffe97060bf83a46f1cbab3fadff27d792/cactus_client-1.1.1.tar.gz", hash = "sha256:a2768dd986f0c08c08eaeda5be622f96396e7f5505d21a8d0fdea3a464d80bce", size = 143059, upload-time = "2026-06-09T23:38:41.407Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/bb/92eb1fc19a7d30861477aa2e46b645ade8be4885c732ebc12be74dcd9510/cactus_client-1.1.0-py3-none-any.whl", hash = "sha256:de316bfb1fdced93f3345c04a821c6b33584a96ee1b73b32115f05ce61d21af7", size = 168003, upload-time = "2026-05-12T06:30:45.169Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/be/06349d3feb294ca6d012b235b18f74665659273731bca7443a2087627299/cactus_client-1.1.1-py3-none-any.whl", hash = "sha256:99c29fda4c48052ae714d80b00c0cb6212444bb899a7693fde23dc707ca7f5d2", size = 168902, upload-time = "2026-06-09T23:38:38.652Z" },
 ]
 
 [[package]]
@@ -423,9 +423,9 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.30,<1" },
     { name = "bandit", marker = "extra == 'dev'" },
     { name = "black", marker = "extra == 'dev'" },
-    { name = "cactus-client", specifier = ">=1.0.1" },
+    { name = "cactus-client", specifier = ">=1.1.1" },
     { name = "coverage", marker = "extra == 'dev'" },
-    { name = "envoy", git = "https://github.com/bsgip/envoy.git?rev=v1.4.0" },
+    { name = "envoy", git = "https://github.com/bsgip/envoy.git?rev=v1.4.1" },
     { name = "flake8", marker = "extra == 'dev'" },
     { name = "flake8-bugbear", marker = "extra == 'dev'" },
     { name = "mypy", marker = "extra == 'dev'" },
@@ -777,8 +777,8 @@ wheels = [
 
 [[package]]
 name = "envoy"
-version = "1.4.0"
-source = { git = "https://github.com/bsgip/envoy.git?rev=v1.4.0#cc475abf0f177dec210648348c520b257fbee017" }
+version = "1.4.1"
+source = { git = "https://github.com/bsgip/envoy.git?rev=v1.4.1#6f62efdddbc268a55bb538e326d42e6c1c38fe55" }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
