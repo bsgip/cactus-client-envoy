@@ -1,13 +1,7 @@
 {
-	"folders": [
-		{
-			"name": "cactus-test",
-			"path": "../../cactus-test"
-		},
-		{
-			"name": "code",
-			"path": ".."
-		}
-	],
-	"settings": {}
+    "folders": [
+        {
+            "path": ".."
+        }
+    ]
 }

@@ -8,6 +8,7 @@ Usage:
 Run from the directory containing your .cactus.yaml file.
 """
 
+import hashlib
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -15,6 +16,14 @@ from pathlib import Path
 from cactus_client.model.config import ClientConfig, load_config
 from cactus_client.sep2 import convert_lfdi_to_sfdi, lfdi_from_cert_file
 from cactus_test_definitions.server.test_procedures import ClientType
+
+
+def managed_lfdi_from_cert_lfdi(cert_lfdi: str) -> str:
+    """Derive a deterministic managed-EndDevice LFDI for an aggregator client.
+    The managed EndDevice LFDI must be distinct from the aggregator's own certificate LFDI.
+    Derive it deterministically from the cert LFDI so repeated runs/logs are stable.
+    """
+    return hashlib.sha256(f"managed-device:{cert_lfdi}".encode()).hexdigest()[:40].upper()
 
 
 def make_client(
@@ -28,7 +37,10 @@ def make_client(
 ) -> ClientConfig:
     cert = certs_dir / f"{cert_name}.crt"
     key = certs_dir / f"{cert_name}.key"
-    lfdi = lfdi_from_cert_file(str(cert))
+    cert_lfdi = lfdi_from_cert_file(str(cert))
+    # Devices register an EndDevice under their own cert LFDI; aggregators register a managed EndDevice under a
+    # distinct LFDI (the cert only identifies the aggregator).
+    lfdi = managed_lfdi_from_cert_lfdi(cert_lfdi) if client_type == ClientType.AGGREGATOR else cert_lfdi
     sfdi = convert_lfdi_to_sfdi(lfdi)
     return ClientConfig(
         id=client_id,
