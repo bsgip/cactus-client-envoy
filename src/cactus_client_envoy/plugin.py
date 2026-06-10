@@ -1,23 +1,14 @@
 import logging
 import os
 
-from cactus_test_definitions.server.admin_instructions import AdminInstructionType
-from cactus_test_definitions.server.test_procedures import AdminInstruction
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from taskiq import InMemoryBroker
-
 import envoy.notification.handler as _nh
 from cactus_client.admin.plugins import hookimpl
 from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult, StepExecution
+from cactus_test_definitions.server.admin_instructions import AdminInstructionType
 from cactus_test_definitions.server.test_procedures import AdminInstruction
 from envoy.notification.handler import STATE_DB_SESSION_MAKER
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from taskiq import InMemoryBroker
 
 from cactus_client_envoy.handler.access import set_client_access
@@ -98,10 +89,10 @@ class EnvoyAdminPlugin:
         return ActionResult.done()
 
     @hookimpl
-    async def admin_instruction(  # noqa C901
+    async def admin_instruction(  # noqa: C901
         self, instruction: AdminInstruction, step: StepExecution, context: AdminContext
     ) -> ActionResult | None:
-        if self._sessionmaker is None:
+        if self._sessionmaker is None or self._admin_uri is None:
             return ActionResult.failed("admin_setup has not been called")
 
         async with self._sessionmaker() as session:
@@ -120,7 +111,12 @@ class EnvoyAdminPlugin:
                     result = await ensure_der_control_list(instruction, context, session)
                 case AdminInstructionType.CREATE_DER_CONTROL:
                     result = await create_der_control(
-                        instruction, context, session, self._admin_uri, self._admin_username, self._admin_password  # type: ignore[arg-type]
+                        instruction,
+                        context,
+                        session,
+                        self._admin_uri,
+                        self._admin_username,
+                        self._admin_password,
                     )
                 case AdminInstructionType.CREATE_DEFAULT_DER_CONTROL:
                     result = await create_default_der_control(instruction, context, session)

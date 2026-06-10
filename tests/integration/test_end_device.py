@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from assertical.fake.generator import generate_class_instance
@@ -124,7 +124,7 @@ async def test_ensure_end_device_aggregator_uses_cert_lfdi_for_identity_and_mana
     monkeypatch.setattr(end_device_handler, "lfdi_from_cert_file", lambda _cert_file: AGG_CERT_LFDI)
     monkeypatch.setattr(common_handler, "lfdi_from_cert_file", lambda _cert_file: AGG_CERT_LFDI)
 
-    now = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    now = datetime(2000, 1, 1, tzinfo=UTC)
     with pg_base_config.cursor() as cur:
         # A real (non-null) aggregator that the cert should be assigned to.
         cur.execute(
@@ -134,7 +134,7 @@ async def test_ensure_end_device_aggregator_uses_cert_lfdi_for_identity_and_mana
         # The aggregator's certificate, stored under the (lowercased) cert LFDI.
         cur.execute(
             "INSERT INTO certificate (certificate_id, created, lfdi, expiry) VALUES (%s, %s, %s, %s)",
-            (1, now, AGG_CERT_LFDI.lower(), datetime(2100, 1, 1, tzinfo=timezone.utc)),
+            (1, now, AGG_CERT_LFDI.lower(), datetime(2100, 1, 1, tzinfo=UTC)),
         )
     pg_base_config.commit()
 
@@ -154,14 +154,10 @@ async def test_ensure_end_device_aggregator_uses_cert_lfdi_for_identity_and_mana
             managed_site = (
                 await session.execute(select(Site).where(Site.lfdi == AGG_MANAGED_LFDI))
             ).scalar_one_or_none()
-            cert_site = (
-                await session.execute(select(Site).where(Site.lfdi == AGG_CERT_LFDI))
-            ).scalar_one_or_none()
+            cert_site = (await session.execute(select(Site).where(Site.lfdi == AGG_CERT_LFDI))).scalar_one_or_none()
             assignment = (
                 await session.execute(
-                    select(AggregatorCertificateAssignment).where(
-                        AggregatorCertificateAssignment.certificate_id == 1
-                    )
+                    select(AggregatorCertificateAssignment).where(AggregatorCertificateAssignment.certificate_id == 1)
                 )
             ).scalar_one_or_none()
 

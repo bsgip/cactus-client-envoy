@@ -1,11 +1,9 @@
 from cactus_client.model.context import AdminContext
+from cactus_client.sep2 import lfdi_from_cert_file
 from envoy.server.model.aggregator import NULL_AGGREGATOR_ID, Aggregator, AggregatorCertificateAssignment
 from envoy.server.model.base import Certificate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from cactus_client.model.context import AdminContext
-from cactus_client.sep2 import lfdi_from_cert_file
 
 
 async def find_aggregator_id(exclude_cert_lfdi: str, context: AdminContext, session: AsyncSession) -> int | None:

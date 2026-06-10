@@ -23,7 +23,7 @@ envoy = "cactus_client_envoy.plugin:EnvoyAdminPlugin"
 dev = [
     "coverage",
     "bandit",
-    "mypy",
+    "ty",
     "ruff",
 ]
 test = ["assertical", "pytest", "pytest-asyncio", "pytest-cov", "pytest-postgresql", "psycopg[binary]"]
