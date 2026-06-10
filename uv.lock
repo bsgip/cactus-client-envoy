@@ -292,7 +292,7 @@ wheels = [
 
 [[package]]
 name = "cactus-client"
-version = "1.1.1"
+version = "1.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -309,9 +309,9 @@ dependencies = [
     { name = "treelib" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/05/9d07e04d56fb0cb99c6193b6486ffe97060bf83a46f1cbab3fadff27d792/cactus_client-1.1.1.tar.gz", hash = "sha256:a2768dd986f0c08c08eaeda5be622f96396e7f5505d21a8d0fdea3a464d80bce", size = 143059, upload-time = "2026-06-09T23:38:41.407Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/3b/8e9ae34e4f6d7fda2542b23c601fc65a465f561753db23cef5306b8669a1/cactus_client-1.1.2.tar.gz", hash = "sha256:1580a538d5b9c1fb8f7646f7d059af5a6bf5c12699f1fcfd0bfd43e9644a8a9a", size = 143240, upload-time = "2026-06-10T01:07:50.544Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/be/06349d3feb294ca6d012b235b18f74665659273731bca7443a2087627299/cactus_client-1.1.1-py3-none-any.whl", hash = "sha256:99c29fda4c48052ae714d80b00c0cb6212444bb899a7693fde23dc707ca7f5d2", size = 168902, upload-time = "2026-06-09T23:38:38.652Z" },
+    { url = "https://files.pythonhosted.org/packages/10/16/b3a58b5559a6048820f243a45f6bf8f18d14dc7ad4483e06cd19040ae3aa/cactus_client-1.1.2-py3-none-any.whl", hash = "sha256:51a9f6ceb175ff5b0292e16984e164409ab7a2588f25ed7861c71c64bb2b7e33", size = 169075, upload-time = "2026-06-10T01:07:48.816Z" },
 ]
 
 [[package]]
@@ -348,7 +348,7 @@ requires-dist = [
     { name = "assertical", marker = "extra == 'test'" },
     { name = "asyncpg", specifier = ">=0.30,<1" },
     { name = "bandit", marker = "extra == 'dev'" },
-    { name = "cactus-client", specifier = ">=1.1.1" },
+    { name = "cactus-client", specifier = ">=1.1.2" },
     { name = "coverage", marker = "extra == 'dev'" },
     { name = "envoy", git = "https://github.com/bsgip/envoy.git?rev=v1.4.1" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'test'" },
