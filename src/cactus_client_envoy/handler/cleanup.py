@@ -13,7 +13,7 @@ from envoy.server.model.doe import (
     SiteControlGroup,
     SiteControlGroupDefault,
 )
-from envoy.server.model.site import Site
+from envoy.server.model.site import Site, SiteGroup
 from envoy.server.model.site_reading import SiteReading, SiteReadingType
 from envoy.server.model.subscription import Subscription
 from envoy.server.model.tariff import TariffGeneratedRate
@@ -26,8 +26,10 @@ logger = logging.getLogger(__name__)
 async def reset_test_state(session: AsyncSession) -> None:
     """Delete all test-created envoy state, leaving pre-seeded aggregator/certificate rows intact.
 
-    Deletion order respects FK deps. Site deletion should include SiteDER (and children), SiteGroupAssignment,
-    SiteLogEvent, and response.
+    Deletion order respects FK deps. Site deletion cascades SiteGroupAssignment, SiteDERRating/Setting/
+    Availability/Status, SiteLogEvent, and response. SiteGroup is deleted (and lazily recreated per test run,
+    mirroring the existing SiteControlGroup pattern) since TariffGeneratedRate/DynamicOperatingEnvelope FK to
+    it without an ON DELETE CASCADE.
     """
     await session.execute(delete(SiteReading))
     await session.execute(delete(SiteReadingType))
@@ -37,6 +39,7 @@ async def reset_test_state(session: AsyncSession) -> None:
     await session.execute(delete(DynamicOperatingEnvelope))
     await session.execute(delete(SiteControlGroupDefault))
     await session.execute(delete(SiteControlGroup))
+    await session.execute(delete(SiteGroup))
     await session.execute(delete(Site))
     await session.commit()
     logger.info("reset_test_state: envoy test state cleared")
