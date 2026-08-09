@@ -320,7 +320,7 @@ requires-dist = [
     { name = "bandit", marker = "extra == 'dev'" },
     { name = "cactus-client", git = "https://github.com/bsgip/cactus-client.git?rev=931250c" },
     { name = "coverage", marker = "extra == 'dev'" },
-    { name = "envoy", git = "https://github.com/bsgip/envoy.git?rev=6ddc383" },
+    { name = "envoy", git = "https://github.com/bsgip/envoy.git?rev=v1.6.0" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'test'" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pytest-asyncio", marker = "extra == 'test'" },
@@ -670,8 +670,8 @@ wheels = [
 
 [[package]]
 name = "envoy"
-version = "1.5.0"
-source = { git = "https://github.com/bsgip/envoy.git?rev=6ddc383#6ddc3837894df9fcded66c901e810b5f58a92097" }
+version = "1.6.0"
+source = { git = "https://github.com/bsgip/envoy.git?rev=v1.6.0#22c2f22f9b970bb88aed5f9a9377922b22ea60d8" }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
