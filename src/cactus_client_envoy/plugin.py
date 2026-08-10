@@ -7,9 +7,7 @@ from cactus_client.model.context import AdminContext
 from cactus_client.model.execution import ActionResult, StepExecution
 from cactus_test_definitions.server.admin_instructions import AdminInstructionType
 from cactus_test_definitions.server.test_procedures import AdminInstruction
-from envoy.notification.handler import STATE_DB_SESSION_MAKER
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from taskiq import InMemoryBroker
 
 from cactus_client_envoy.handler.access import set_client_access
 from cactus_client_envoy.handler.cleanup import (
@@ -43,7 +41,6 @@ class EnvoyAdminPlugin:
     def __init__(self) -> None:
         self._engine: AsyncEngine | None = None
         self._sessionmaker: async_sessionmaker[AsyncSession] | None = None
-        self._broker: InMemoryBroker | None = None
         self._fsa_annotations: dict[str, int] = {}
         self._admin_uri: str | None = None
         self._admin_username: str = "admin"
@@ -65,10 +62,7 @@ class EnvoyAdminPlugin:
                 f"admin_uri is not configured — set admin_uri in .cactus.yaml or {ENVOY_ADMIN_URI_ENV} env var"
             )
 
-        self._broker = InMemoryBroker()
-        await self._broker.startup()
-        setattr(self._broker.state, STATE_DB_SESSION_MAKER, self._sessionmaker)
-        _nh._enabled_broker = self._broker
+        _nh._notifications_enabled = True
 
         async with self._sessionmaker() as session:
             await reset_test_state(session)
@@ -78,10 +72,7 @@ class EnvoyAdminPlugin:
 
     @hookimpl
     async def admin_teardown(self, context: AdminContext) -> ActionResult:
-        if self._broker is not None:
-            _nh._enabled_broker = None
-            await self._broker.shutdown()
-            self._broker = None
+        _nh._notifications_enabled = False
         if self._engine is not None:
             await self._engine.dispose()
             self._engine = None

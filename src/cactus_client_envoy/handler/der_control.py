@@ -21,6 +21,8 @@ from pydantic import TypeAdapter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cactus_client_envoy.handler.common import site_group_ids_for_site
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_DURATION_SECONDS = 8
@@ -50,6 +52,13 @@ async def create_der_control(
         return ActionResult.failed(
             f"create-der-control: no site found for LFDI {client_config.lfdi} — run ensure-end-device first"
         )
+
+    site_group_ids = await site_group_ids_for_site(session, site.site_id)
+    if not site_group_ids:
+        return ActionResult.failed(
+            f"create-der-control: site_id={site.site_id} has no SiteGroup membership — run ensure-end-device first"
+        )
+    site_group_id = site_group_ids[0]
 
     # Find or create a SiteControlGroup (DERProgram) for the given primacy
     group = (
@@ -87,7 +96,7 @@ async def create_der_control(
             latest_end = (
                 await session.execute(
                     select(func.max(DynamicOperatingEnvelope.end_time)).where(
-                        (DynamicOperatingEnvelope.site_id == site.site_id)
+                        (DynamicOperatingEnvelope.site_group_id == site_group_id)
                         & (DynamicOperatingEnvelope.site_control_group_id == group.site_control_group_id)
                     )
                 )
@@ -112,7 +121,7 @@ async def create_der_control(
         export_limit = Decimal(0)
 
     request = SiteControlRequest(
-        site_id=site.site_id,
+        site_group_id=site_group_id,
         calculation_log_id=None,
         duration_seconds=duration_seconds,
         start_time=start_time,
@@ -211,8 +220,8 @@ async def create_default_der_control(
         )
 
     await session.flush()
+    await NotificationManager.notify_changed_deleted_entities(session, SubscriptionResource.DEFAULT_SITE_CONTROL, now)
     await session.commit()
-    await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.DEFAULT_SITE_CONTROL, now)
     return ActionResult.done()
 
 

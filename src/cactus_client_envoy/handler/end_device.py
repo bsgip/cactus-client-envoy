@@ -6,18 +6,17 @@ from cactus_client.sep2 import lfdi_from_cert_file
 from cactus_client.time import utc_now
 from cactus_test_definitions.server.test_procedures import AdminInstruction, ClientType
 from envoy.notification.manager.notification import NotificationManager
+from envoy.server.crud.site_group import assign_default_site_groups_to_site
 from envoy.server.model.aggregator import AggregatorCertificateAssignment
 from envoy.server.model.base import Certificate
-from envoy.server.model.doe import DynamicOperatingEnvelope
-from envoy.server.model.site import Site, SiteDER
+from envoy.server.model.site import Site
 from envoy.server.model.site_reading import SiteReading, SiteReadingType
 from envoy.server.model.subscription import Subscription, SubscriptionResource
-from envoy.server.model.tariff import TariffGeneratedRate
 from envoy_schema.server.schema.sep2.types import DeviceCategory
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cactus_client_envoy.handler.common import find_aggregator_id
+from cactus_client_envoy.handler.common import ensure_default_site_group, find_aggregator_id
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +36,9 @@ async def ensure_end_device(  # noqa C901
         raise NotImplementedError(
             "ensure-end-device: has_registration_link=False is not supported — envoy always includes one"
         )
+    # envoy now unconditionally reports the CSIP-Aus virtual DER (total=1) for any existing site
+    if has_der_list is False:
+        raise NotImplementedError("ensure-end-device: has_der_list=False is not supported — envoy always includes it")
 
     is_aggregator = client_type_param == ClientType.AGGREGATOR or (
         client_type_param is None and client_config.type == ClientType.AGGREGATOR
@@ -102,6 +104,8 @@ async def ensure_end_device(  # noqa C901
             )
             session.add(site)
             await session.flush()
+            await ensure_default_site_group(session)
+            await assign_default_site_groups_to_site(session, site.site_id, site_changed_time)
             logger.info(
                 "ensure-end-device: registered site for LFDI %s (site_id=%s)",
                 client_config.lfdi,
@@ -115,12 +119,11 @@ async def ensure_end_device(  # noqa C901
                 site.site_id,
             )
 
-        if has_der_list:
-            await _ensure_site_der(site.site_id, session)
-
-        await session.commit()
         if site_created:
-            await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.SITE, site_changed_time)
+            await NotificationManager.notify_changed_deleted_entities(
+                session, SubscriptionResource.SITE, site_changed_time
+            )
+        await session.commit()
         return ActionResult.done()
     else:
         if existing is None:
@@ -145,6 +148,10 @@ async def delete_site(site_id: int, session: AsyncSession) -> None:
     Mirrors delete_site_for_aggregator in envoy.server.crud.site, with two differences:
     - Plain DELETE instead of delete_rows_into_archive — no archival needed for test teardown.
     - Skips explicit DER child and SubscriptionCondition cleanup — the ON DELETE CASCADE handles it
+
+    TariffGeneratedRate/DynamicOperatingEnvelope are now SiteGroup-scoped rather than Site-scoped, so they are no
+    longer cleaned up here — deleting this one site's shared group's rows would affect every other site in the
+    same group. reset_test_state already clears them at the start of every test run.
     """
 
     # site_reading - site_reading_type (no cascade): delete readings before their types
@@ -160,11 +167,8 @@ async def delete_site(site_id: int, session: AsyncSession) -> None:
     # subscriptions (scoped_site_id is nullable FK, no cascade); SubscriptionCondition cascades from subscription
     await session.execute(delete(Subscription).where(Subscription.scoped_site_id == site_id))
 
-    # tariff rates and DOEs (no cascade)
-    await session.execute(delete(TariffGeneratedRate).where(TariffGeneratedRate.site_id == site_id))
-    await session.execute(delete(DynamicOperatingEnvelope).where(DynamicOperatingEnvelope.site_id == site_id))
-
-    # site itself (cascade handles: site_group_assignment, site_der + children, response, log_events)
+    # site itself (cascade handles: site_group_assignment, site_der_rating/setting/availability/status, response,
+    # log_events)
     await session.execute(delete(Site).where(Site.site_id == site_id))
 
 
@@ -180,14 +184,3 @@ async def resolve_aggregator_id(lfdi: str, session: AsyncSession) -> int | None:
         .limit(1)
     )
     return (await session.execute(stmt)).scalar_one_or_none()
-
-
-async def _ensure_site_der(site_id: int, session: AsyncSession) -> None:
-    """Create a SiteDER for the given site if one does not already exist.
-    Mirrors generate_default_site_der in envoy.server.crud.der
-    """
-    existing = (await session.execute(select(SiteDER).where(SiteDER.site_id == site_id))).scalar_one_or_none()
-    if existing is None:
-        session.add(SiteDER(site_id=site_id, changed_time=utc_now()))
-        await session.flush()
-        logger.info("ensure-end-device: created SiteDER for site_id=%s", site_id)

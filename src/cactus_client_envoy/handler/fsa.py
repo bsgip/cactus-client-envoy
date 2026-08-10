@@ -53,8 +53,10 @@ async def ensure_fsa(
             primacy,
             group.site_control_group_id,
         )
+        await NotificationManager.notify_changed_deleted_entities(
+            session, SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now
+        )
         await session.commit()
-        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now)
     else:
         logger.info(
             "ensure-fsa: SiteControlGroup already exists fsa_id=%d primacy=%d (id=%d)",
@@ -106,9 +108,11 @@ async def ensure_der_program(
             primacy,
             group.site_control_group_id,
         )
+        await NotificationManager.notify_changed_deleted_entities(session, SubscriptionResource.SITE_CONTROL_GROUP, now)
+        await NotificationManager.notify_changed_deleted_entities(
+            session, SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now
+        )
         await session.commit()
-        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.SITE_CONTROL_GROUP, now)
-        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now)
     else:
         now = utc_now()
         group.changed_time = now
@@ -118,7 +122,9 @@ async def ensure_der_program(
             primacy,
             group.site_control_group_id,
         )
+        await NotificationManager.notify_changed_deleted_entities(session, SubscriptionResource.SITE_CONTROL_GROUP, now)
+        await NotificationManager.notify_changed_deleted_entities(
+            session, SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now
+        )
         await session.commit()
-        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.SITE_CONTROL_GROUP, now)
-        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.FUNCTION_SET_ASSIGNMENTS, now)
     return ActionResult.done()

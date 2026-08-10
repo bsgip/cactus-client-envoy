@@ -46,13 +46,15 @@ async def set_poll_rate(instruction: AdminInstruction, context: AdminContext, se
             f"set-poll-rate: unsupported resource '{resource}'. Supported: {list(_POLL_RATE_FIELD_MAP)}"
         )
 
-    now = await _update_runtime_config(session, field, rate_seconds)
+    now = utc_now()
+    await _update_runtime_config(session, field, rate_seconds, now)
     logger.info("set-poll-rate: set %s=%d", field, rate_seconds)
 
     notification_resource = _POLL_RATE_NOTIFICATION_MAP.get(resource)
     if notification_resource is not None:
-        await NotificationManager.notify_changed_deleted_entities(notification_resource, now)
+        await NotificationManager.notify_changed_deleted_entities(session, notification_resource, now)
 
+    await session.commit()
     return ActionResult.done()
 
 
@@ -66,16 +68,16 @@ async def set_post_rate(instruction: AdminInstruction, context: AdminContext, se
             f"set-post-rate: unsupported resource '{resource}'. Supported: {list(_POST_RATE_FIELD_MAP)}"
         )
 
-    await _update_runtime_config(session, field, rate_seconds)
+    await _update_runtime_config(session, field, rate_seconds, utc_now())
+    await session.commit()
     logger.info("set-post-rate: set %s=%d", field, rate_seconds)
     return ActionResult.done()
 
 
-async def _update_runtime_config(session: AsyncSession, field: str, value: int) -> datetime:
+async def _update_runtime_config(session: AsyncSession, field: str, value: int, now: datetime) -> None:
     config = (
         await session.execute(select(RuntimeServerConfig).where(RuntimeServerConfig.runtime_server_config_id == 1))
     ).scalar_one_or_none()
-    now = utc_now()
     if config is None:
         config = RuntimeServerConfig(changed_time=now)
         session.add(config)
@@ -83,5 +85,3 @@ async def _update_runtime_config(session: AsyncSession, field: str, value: int) 
         config.changed_time = now
     setattr(config, field, value)
     await session.flush()
-    await session.commit()
-    return now

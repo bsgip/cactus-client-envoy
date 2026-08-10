@@ -13,6 +13,8 @@ from envoy.server.model.subscription import SubscriptionResource
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cactus_client_envoy.handler.common import site_group_ids_for_site
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,9 +32,10 @@ async def ensure_der_control_list(
         now = utc_now()
         group = SiteControlGroup(description="cactus-default", primacy=1, fsa_id=1, changed_time=now)
         session.add(group)
-        await session.commit()
+        await session.flush()
         logger.info("ensure-der-control-list: created default SiteControlGroup (id=%d)", group.site_control_group_id)
-        await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.SITE_CONTROL_GROUP, now)
+        await NotificationManager.notify_changed_deleted_entities(session, SubscriptionResource.SITE_CONTROL_GROUP, now)
+        await session.commit()
     return ActionResult.done()
 
 
@@ -53,10 +56,15 @@ async def clear_der_controls(
             f"clear-der-controls: no site found for LFDI {client_config.lfdi} — run ensure-end-device first"
         )
 
+    group_ids = await site_group_ids_for_site(session, site.site_id)
+    if not group_ids:
+        logger.info("clear-der-controls: site_id=%d has no SiteGroup membership, nothing to clear", site.site_id)
+        return ActionResult.done()
+
     now = utc_now()
     # Include both active (start_time <= now) and scheduled (start_time > now) controls
     cancel_filter = (
-        (DynamicOperatingEnvelope.site_id == site.site_id)
+        DynamicOperatingEnvelope.site_group_id.in_(group_ids)
         & (DynamicOperatingEnvelope.end_time > now)
         & (DynamicOperatingEnvelope.superseded == False)  # noqa: E712
     )
@@ -97,6 +105,8 @@ async def clear_der_controls(
         else:
             logger.info("clear-der-controls: no non-expired controls found for site_id=%d", site.site_id)
 
+    await NotificationManager.notify_changed_deleted_entities(
+        session, SubscriptionResource.DYNAMIC_OPERATING_ENVELOPE, now
+    )
     await session.commit()
-    await NotificationManager.notify_changed_deleted_entities(SubscriptionResource.DYNAMIC_OPERATING_ENVELOPE, now)
     return ActionResult.done()
