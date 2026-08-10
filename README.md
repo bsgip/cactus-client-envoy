@@ -153,8 +153,11 @@ python ./cactus-client-envoy/setup_clients.py ./envoy/demo/tls-termination/test_
 |---|---|---|
 | `ENVOY_DB_DSN` | SQLAlchemy async DSN for the Envoy PostgreSQL database | `postgresql+asyncpg://test_user:test_pwd@localhost:8003/test_db` |
 | `DATABASE_URL` | Required by Envoy's model layer at import time — use the same value | `postgresql+asyncpg://test_user:test_pwd@localhost:8003/test_db` |
+| `ENVOY_ADMIN_URI` | Base URL of the envoy-admin service | `http://localhost:8001` |
+| `ENVOY_ADMIN_USERNAME` | Basic auth username for envoy-admin (defaults to `admin`) | `admin` |
+| `ENVOY_ADMIN_PASSWORD` | Basic auth password for envoy-admin (defaults to `password`) | `password` |
 
-Both are pre-configured in `sample.env` for the demo environment. The plugin loads `cactus-client-envoy/.env` automatically at import time — you do not need to export these variables manually.
+All are pre-configured in `sample.env` for the demo environment. The plugin loads `cactus-client-envoy/.env` automatically at import time — you do not need to export these variables manually.
 
 ## Supported admin instructions
 
