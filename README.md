@@ -84,7 +84,12 @@ cactus setup --local-cfg ./cactus-test
 cactus server dcap https://localhost:8443/dcap
 cactus server verify true
 cactus server serca ./envoy/demo/tls-termination/test_certs/testca.crt
+cactus server notification https://cactus.cecs.anu.edu.au/client-notifications/
 ```
+
+> The notification URI is required for any test involving subscriptions (eg `DDERC SUBSCRIBE`
+> steps). This uses the shared, ANU hosted [client-notifications](https://github.com/bsgip/cactus-client-notifications)
+> service — see that repo if you'd rather self-host.
 
 Then run `setup_clients.py` to register all demo clients. It derives LFDIs directly from the certificates:
 
