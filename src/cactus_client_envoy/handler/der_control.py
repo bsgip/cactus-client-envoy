@@ -116,6 +116,7 @@ async def create_der_control(
             "opModConnect",
             "opModEnergize",
             "opModFixedW",
+            "opModStorageTargetW",
         )
     ):
         export_limit = Decimal(0)
@@ -134,6 +135,7 @@ async def create_der_control(
         load_limit_watts=_dec(instruction.parameters.get("opModLoadLimW")),
         set_point_percentage=_dec(instruction.parameters.get("opModFixedW")),
         ramp_time_seconds=_dec(instruction.parameters.get("rampTms"), divisor=100),
+        storage_target_watts=_dec(instruction.parameters.get("opModStorageTargetW")),
     )
 
     url = admin_uri.rstrip("/") + SiteControlUri.format(group_id=group.site_control_group_id)
