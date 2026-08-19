@@ -16,7 +16,7 @@ from envoy.server.model.doe import (
 from envoy.server.model.site import Site, SiteGroup
 from envoy.server.model.site_reading import SiteReading, SiteReadingType
 from envoy.server.model.subscription import Subscription
-from envoy.server.model.tariff import TariffGeneratedRate
+from envoy.server.model.tariff import Tariff, TariffComponent, TariffGeneratedRate
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,12 +29,14 @@ async def reset_test_state(session: AsyncSession) -> None:
     Deletion order respects FK deps. Site deletion cascades SiteGroupAssignment, SiteDERRating/Setting/
     Availability/Status, SiteLogEvent, and response. SiteGroup is deleted (and lazily recreated per test run,
     mirroring the existing SiteControlGroup pattern) since TariffGeneratedRate/DynamicOperatingEnvelope FK to
-    it without an ON DELETE CASCADE.
+    it without an ON DELETE CASCADE. TariffGeneratedRate -> TariffComponent -> Tariff is deleted in FK order.
     """
     await session.execute(delete(SiteReading))
     await session.execute(delete(SiteReadingType))
     await session.execute(delete(Subscription))
     await session.execute(delete(TariffGeneratedRate))
+    await session.execute(delete(TariffComponent))
+    await session.execute(delete(Tariff))
     await session.execute(delete(ArchiveDynamicOperatingEnvelope))
     await session.execute(delete(DynamicOperatingEnvelope))
     await session.execute(delete(SiteControlGroupDefault))

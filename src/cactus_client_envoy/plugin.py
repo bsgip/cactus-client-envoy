@@ -25,6 +25,11 @@ from cactus_client_envoy.handler.der_control import (
 from cactus_client_envoy.handler.end_device import ensure_end_device
 from cactus_client_envoy.handler.fsa import ensure_der_program, ensure_fsa
 from cactus_client_envoy.handler.mup import ensure_mup_list_empty
+from cactus_client_envoy.handler.pricing import (
+    create_rate_component,
+    create_time_tariff_interval,
+    ensure_tariff_profile,
+)
 from cactus_client_envoy.handler.rate import set_poll_rate, set_post_rate
 
 ENVOY_DB_DSN_ENV = "ENVOY_DB_DSN"
@@ -42,6 +47,7 @@ class EnvoyAdminPlugin:
         self._engine: AsyncEngine | None = None
         self._sessionmaker: async_sessionmaker[AsyncSession] | None = None
         self._fsa_annotations: dict[str, int] = {}
+        self._rate_component_tags: dict[str, int] = {}
         self._admin_uri: str | None = None
         self._admin_username: str = "admin"
         self._admin_password: str = "password"  # noqa: S105
@@ -54,6 +60,7 @@ class EnvoyAdminPlugin:
         self._engine = create_async_engine(dsn)
         self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False)
         self._fsa_annotations = {}
+        self._rate_component_tags = {}
         self._admin_uri = os.environ.get(ENVOY_ADMIN_URI_ENV)
         self._admin_username = os.environ.get(ENVOY_ADMIN_USERNAME_ENV, "admin")
         self._admin_password = os.environ.get(ENVOY_ADMIN_PASSWORD_ENV, "password")
@@ -117,6 +124,12 @@ class EnvoyAdminPlugin:
                     result = await set_poll_rate(instruction, context, session)
                 case AdminInstructionType.SET_POST_RATE:
                     result = await set_post_rate(instruction, context, session)
+                case AdminInstructionType.ENSURE_TARIFF_PROFILE:
+                    result = await ensure_tariff_profile(instruction, context, session, self._fsa_annotations)
+                case AdminInstructionType.CREATE_RATE_COMPONENT:
+                    result = await create_rate_component(instruction, context, session, self._rate_component_tags)
+                case AdminInstructionType.CREATE_TIME_TARIFF_INTERVAL:
+                    result = await create_time_tariff_interval(instruction, context, session, self._rate_component_tags)
 
         if result is not None and not result.completed:
             logger.error("admin-instruction %s failed: %s", instruction.type, result.description)

@@ -20,6 +20,11 @@ _POLL_RATE_FIELD_MAP: dict[str, str] = {
     "DERProgramList": "derpl_pollrate_seconds",
     "DERList": "derl_pollrate_seconds",
     "MirrorUsagePointList": "mup_postrate_seconds",  # MUP has one rate; envoy exposes it as pollRate in /mup response
+    "TariffProfileList": "tp_pollrate_seconds",
+    # envoy uses one config field for both TimeTariffIntervalList and its CSIP-Aus CombinedTimeTariffIntervalList
+    # extension (see envoy/server/manager/pricing.py)
+    "CombinedTimeTariffIntervalList": "tti_pollrate_seconds",
+    "TimeTariffIntervalList": "tti_pollrate_seconds",
 }
 
 _POST_RATE_FIELD_MAP: dict[str, str] = {
