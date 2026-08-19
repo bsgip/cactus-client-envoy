@@ -263,7 +263,7 @@ wheels = [
 [[package]]
 name = "cactus-client"
 version = "1.2.0"
-source = { git = "https://github.com/bsgip/cactus-client.git?rev=b0405769842eaa571a9c6705182ca1f76e9ba0ef#b0405769842eaa571a9c6705182ca1f76e9ba0ef" }
+source = { git = "https://github.com/bsgip/cactus-client.git?rev=cdbe6364411f5c495f45f26f0561b8cd1605b0c5#cdbe6364411f5c495f45f26f0561b8cd1605b0c5" }
 dependencies = [
     { name = "aiohttp" },
     { name = "apluggy" },
@@ -314,7 +314,7 @@ requires-dist = [
     { name = "assertical", marker = "extra == 'test'" },
     { name = "asyncpg", specifier = ">=0.30,<1" },
     { name = "bandit", marker = "extra == 'dev'" },
-    { name = "cactus-client", git = "https://github.com/bsgip/cactus-client.git?rev=b0405769842eaa571a9c6705182ca1f76e9ba0ef" },
+    { name = "cactus-client", git = "https://github.com/bsgip/cactus-client.git?rev=cdbe6364411f5c495f45f26f0561b8cd1605b0c5" },
     { name = "coverage", marker = "extra == 'dev'" },
     { name = "envoy", git = "https://github.com/bsgip/envoy.git?rev=c10b68b31f3d2e9806e09f0193f58896bbbdba68" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'test'" },
@@ -344,15 +344,11 @@ wheels = [
 [[package]]
 name = "cactus-test-definitions"
 version = "1.15.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/bsgip/cactus-test-definitions?rev=f56f8cd98d679bba5591e9e880ab2e018b049d4e#f56f8cd98d679bba5591e9e880ab2e018b049d4e" }
 dependencies = [
     { name = "dataclass-wizard" },
     { name = "pyyaml" },
     { name = "pyyaml-include" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/3e/2761a13c8c20736eaaca13bd2e964f39ae64ee69302bb256f43645befa2b/cactus_test_definitions-1.15.0.tar.gz", hash = "sha256:b6f8783579c8d76184be9c9150e30dd8c57b248a6afe6344dcbb5beb64692d75", size = 178077, upload-time = "2026-07-21T01:52:26.593Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/b9/cb06d1585ec4917e1cdd491e65f3e11763b6cddddaf058ba4171324c35e8/cactus_test_definitions-1.15.0-py3-none-any.whl", hash = "sha256:c4276362faa32a8049b8b720f7823eb4670d8f9116fbba532f3896df71b7ec32", size = 352224, upload-time = "2026-07-21T01:52:24.661Z" },
 ]
 
 [[package]]

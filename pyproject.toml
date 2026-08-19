@@ -8,7 +8,7 @@ dynamic = ["version", "readme"]
 requires-python = ">= 3.12"
 description = "Envoy admin plugin for cactus-client — handles admin instructions against a local Envoy server"
 dependencies = [
-    "cactus_client @ git+https://github.com/bsgip/cactus-client.git@b0405769842eaa571a9c6705182ca1f76e9ba0ef",
+    "cactus_client @ git+https://github.com/bsgip/cactus-client.git@cdbe6364411f5c495f45f26f0561b8cd1605b0c5",
     "envoy @ git+https://github.com/bsgip/envoy.git@c10b68b31f3d2e9806e09f0193f58896bbbdba68",
     "sqlalchemy[asyncio]>=2.0,<3",
     "asyncpg>=0.30,<1",
