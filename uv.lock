@@ -266,8 +266,8 @@ wheels = [
 
 [[package]]
 name = "cactus-client"
-version = "1.1.3"
-source = { git = "https://github.com/bsgip/cactus-client.git?rev=931250c#931250ca93bfbd485a057a9ff6cb300cd124be2f" }
+version = "1.3.0"
+source = { git = "https://github.com/bsgip/cactus-client.git?rev=v1.3.0#a4a71d61c9031b84266d8a6cb51c8a93a8f90f1f" }
 dependencies = [
     { name = "aiohttp" },
     { name = "apluggy" },
@@ -318,9 +318,9 @@ requires-dist = [
     { name = "assertical", marker = "extra == 'test'" },
     { name = "asyncpg", specifier = ">=0.30,<1" },
     { name = "bandit", marker = "extra == 'dev'" },
-    { name = "cactus-client", git = "https://github.com/bsgip/cactus-client.git?rev=931250c" },
+    { name = "cactus-client", git = "https://github.com/bsgip/cactus-client.git?rev=v1.3.0" },
     { name = "coverage", marker = "extra == 'dev'" },
-    { name = "envoy", git = "https://github.com/bsgip/envoy.git?rev=v1.6.0" },
+    { name = "envoy", git = "https://github.com/bsgip/envoy.git?rev=v1.8.0" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'test'" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pytest-asyncio", marker = "extra == 'test'" },
@@ -670,8 +670,8 @@ wheels = [
 
 [[package]]
 name = "envoy"
-version = "1.6.0"
-source = { git = "https://github.com/bsgip/envoy.git?rev=v1.6.0#22c2f22f9b970bb88aed5f9a9377922b22ea60d8" }
+version = "1.8.0"
+source = { git = "https://github.com/bsgip/envoy.git?rev=v1.8.0#8ab220d3ece19db4c6d6a08d5c4c536555b8200c" }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
@@ -695,15 +695,15 @@ dependencies = [
 
 [[package]]
 name = "envoy-schema"
-version = "1.3.0"
+version = "1.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "pydantic-xml", extra = ["lxml"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/38/e8c29f4d5f9292f2805eb251ed260576683f37966a3aca08bc850a6481f0/envoy_schema-1.3.0.tar.gz", hash = "sha256:768a193f48525f3642cc9925f8602d1974479dfee1801c8811296fcbd617bfe3", size = 42450, upload-time = "2026-07-30T02:14:15.887Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/25/8e5208224119ab6f0aa03976306d2c121a889ed80c97dd02545560f5a0fa/envoy_schema-1.5.1.tar.gz", hash = "sha256:47765b39eba5a29f489889b47d35bdce5be065809bbdb52b6e7ebc624d7b7bd4", size = 42365, upload-time = "2026-09-18T02:13:34.937Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/92/2dbca8aaa640ca1ff0321a92a1aefad3bb3a3642fadbed0c0b7139cfec05/envoy_schema-1.3.0-py3-none-any.whl", hash = "sha256:4c237b462e53cc03db07378dd29c20615556a62e3f7703bd70d06adec61151dc", size = 55084, upload-time = "2026-07-30T02:14:14.54Z" },
+    { url = "https://files.pythonhosted.org/packages/76/9c/2a85994ed251a48ca8a976e53f54e25bb55593b713bec33b33e0e3ded826/envoy_schema-1.5.1-py3-none-any.whl", hash = "sha256:918976efa7fb1daf4c51a8453bee52ffbc11b1a71a2714ffa44c9add2847f72c", size = 55134, upload-time = "2026-09-18T02:13:33.161Z" },
 ]
 
 [[package]]
