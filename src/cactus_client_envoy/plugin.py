@@ -117,6 +117,18 @@ class EnvoyAdminPlugin:
                     result = await set_poll_rate(instruction, context, session)
                 case AdminInstructionType.SET_POST_RATE:
                     result = await set_post_rate(instruction, context, session)
+                case AdminInstructionType.ENSURE_TARIFF_PROFILE:
+                    return ActionResult.failed(
+                        "ensure-tariff-profile: unsupported in CSIP-AUS v1.2 - this is a test definition error."
+                    )
+                case AdminInstructionType.ENSURE_RATE_COMPONENT:
+                    return ActionResult.failed(
+                        "ensure-rate-component: unsupported in CSIP-AUS v1.2 - this is a test definition error."
+                    )
+                case AdminInstructionType.ENSURE_TIME_TARIFF_INTERVAL:
+                    return ActionResult.failed(
+                        "ensure-time-tariff-interval: unsupported in CSIP-AUS v1.2 - this is a test definition error."
+                    )
 
         if result is not None and not result.completed:
             logger.error("admin-instruction %s failed: %s", instruction.type, result.description)
