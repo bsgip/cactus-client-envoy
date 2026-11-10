@@ -1,8 +1,17 @@
 # cactus-client-envoy
 
-An [apluggy](https://github.com/simonsobs/apluggy) plugin for [cactus-client](../cactus-client) that implements admin instructions against a local [Envoy](../envoy) server via direct database access.
+An [apluggy](https://github.com/simonsobs/apluggy) plugin for [cactus-client](../cactus-client) that implements admin instructions against a local [envoy](../envoy) server via direct database access.
 
 When `cactus-client` encounters an `admin_instruction` step (e.g. `ensure-end-device`), it calls registered plugins via the `cactus_client.admin` hook system. This package provides the Envoy-backed implementation of those hooks.
+
+
+## CSIP-AUS Versions
+
+Each build of of this plugin targets a single version of [CSIP-AUS](https://csipaus.org/) by the [cactus-client](../cactus-client) it targets.
+
+| **CSIP-AUS Version** | **Branch** | **Release Range** | **CACTUS-Client Compatibility** |
+| `v1.1a` `v1.2` | `main` | `v1.*` | `v1.*` |
+| `v1.3` | `csipaus.org/ns/v1.3` | `v2.*` | `v2.*` |
 
 ## How the plugin works
 
