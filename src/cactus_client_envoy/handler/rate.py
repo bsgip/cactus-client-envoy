@@ -20,6 +20,8 @@ _POLL_RATE_FIELD_MAP: dict[str, str] = {
     "DERProgramList": "derpl_pollrate_seconds",
     "DERList": "derl_pollrate_seconds",
     "MirrorUsagePointList": "mupl_pollrate_seconds",
+    "TariffProfileList": "tp_pollrate_seconds",
+    "CombinedTimeTariffIntervalList": "tti_pollrate_seconds",
 }
 
 _POST_RATE_FIELD_MAP: dict[str, str] = {

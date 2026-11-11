@@ -13,7 +13,6 @@ from envoy.server.model.doe import (
     SiteControlGroup,
     SiteControlGroupDefault,
 )
-from envoy.server.model.site import Site
 from envoy.server.model.subscription import SubscriptionResource
 from envoy_schema.admin.schema.site_control import SiteControlRequest
 from envoy_schema.admin.schema.uri import SiteControlUri
@@ -21,7 +20,7 @@ from pydantic import TypeAdapter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cactus_client_envoy.handler.common import site_group_ids_for_site
+from cactus_client_envoy.handler.common import get_default_site_group_id
 
 logger = logging.getLogger(__name__)
 
@@ -44,21 +43,11 @@ async def create_der_control(
     duration_seconds: int = instruction.parameters.get("duration_seconds", DEFAULT_DURATION_SECONDS)
     start_offset_seconds: int | None = instruction.parameters.get("start_offset_seconds")
 
-    client_config = context.client_config_for(instruction.client)
-
-    # Look up site by LFDI
-    site = (await session.execute(select(Site).where(Site.lfdi == client_config.lfdi))).scalar_one_or_none()
-    if site is None:
+    site_group_id = await get_default_site_group_id(instruction, context, session)
+    if site_group_id is None:
         return ActionResult.failed(
-            f"create-der-control: no site found for LFDI {client_config.lfdi} — run ensure-end-device first"
+            "create-der-control: Couldn't resolve SiteGroup membership — run ensure-end-device first"
         )
-
-    site_group_ids = await site_group_ids_for_site(session, site.site_id)
-    if not site_group_ids:
-        return ActionResult.failed(
-            f"create-der-control: site_id={site.site_id} has no SiteGroup membership — run ensure-end-device first"
-        )
-    site_group_id = site_group_ids[0]
 
     # Find or create a SiteControlGroup (DERProgram) for the given primacy
     group = (
@@ -116,6 +105,7 @@ async def create_der_control(
             "opModConnect",
             "opModEnergize",
             "opModFixedW",
+            "opModStorageTargetW",
         )
     ):
         export_limit = Decimal(0)
@@ -134,6 +124,7 @@ async def create_der_control(
         load_limit_watts=_dec(instruction.parameters.get("opModLoadLimW")),
         set_point_percentage=_dec(instruction.parameters.get("opModFixedW")),
         ramp_time_seconds=_dec(instruction.parameters.get("rampTms"), divisor=100),
+        storage_target_watts=_dec(instruction.parameters.get("opModStorageTargetW")),
     )
 
     url = admin_uri.rstrip("/") + SiteControlUri.format(group_id=group.site_control_group_id)
@@ -148,8 +139,8 @@ async def create_der_control(
                 )
 
     logger.info(
-        "create-der-control: created SiteControl via admin API for site_id=%d start=%s",
-        site.site_id,
+        "create-der-control: created SiteControl via admin API for site_group_id=%d start=%s",
+        site_group_id,
         start_time,
     )
     return ActionResult.done()
