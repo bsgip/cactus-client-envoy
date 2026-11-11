@@ -25,6 +25,11 @@ from cactus_client_envoy.handler.der_control import (
 from cactus_client_envoy.handler.end_device import ensure_end_device
 from cactus_client_envoy.handler.fsa import ensure_der_program, ensure_fsa
 from cactus_client_envoy.handler.mup import ensure_mup_list_empty
+from cactus_client_envoy.handler.pricing import (
+    ensure_rate_component,
+    ensure_tariff_profile,
+    ensure_time_tariff_interval,
+)
 from cactus_client_envoy.handler.rate import set_poll_rate, set_post_rate
 
 ENVOY_DB_DSN_ENV = "ENVOY_DB_DSN"
@@ -42,6 +47,8 @@ class EnvoyAdminPlugin:
         self._engine: AsyncEngine | None = None
         self._sessionmaker: async_sessionmaker[AsyncSession] | None = None
         self._fsa_annotations: dict[str, int] = {}
+        self._tp_annotations: dict[str, int] = {}
+        self._rc_annotations: dict[str, int] = {}
         self._admin_uri: str | None = None
         self._admin_username: str = "admin"
         self._admin_password: str = "password"  # noqa: S105
@@ -54,6 +61,8 @@ class EnvoyAdminPlugin:
         self._engine = create_async_engine(dsn)
         self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False)
         self._fsa_annotations = {}
+        self._tp_annotations = {}
+        self._rc_annotations = {}
         self._admin_uri = os.environ.get(ENVOY_ADMIN_URI_ENV)
         self._admin_username = os.environ.get(ENVOY_ADMIN_USERNAME_ENV, "admin")
         self._admin_password = os.environ.get(ENVOY_ADMIN_PASSWORD_ENV, "password")
@@ -118,16 +127,35 @@ class EnvoyAdminPlugin:
                 case AdminInstructionType.SET_POST_RATE:
                     result = await set_post_rate(instruction, context, session)
                 case AdminInstructionType.ENSURE_TARIFF_PROFILE:
-                    return ActionResult.failed(
-                        "ensure-tariff-profile: unsupported in CSIP-AUS v1.2 - this is a test definition error."
+                    result: ActionResult = await ensure_tariff_profile(
+                        instruction,
+                        context,
+                        session,
+                        self._admin_uri,
+                        self._admin_username,
+                        self._admin_password,
+                        self._tp_annotations,
                     )
                 case AdminInstructionType.ENSURE_RATE_COMPONENT:
-                    return ActionResult.failed(
-                        "ensure-rate-component: unsupported in CSIP-AUS v1.2 - this is a test definition error."
+                    result: ActionResult = await ensure_rate_component(
+                        instruction,
+                        context,
+                        session,
+                        self._admin_uri,
+                        self._admin_username,
+                        self._admin_password,
+                        self._tp_annotations,
+                        self._rc_annotations,
                     )
                 case AdminInstructionType.ENSURE_TIME_TARIFF_INTERVAL:
-                    return ActionResult.failed(
-                        "ensure-time-tariff-interval: unsupported in CSIP-AUS v1.2 - this is a test definition error."
+                    result: ActionResult = await ensure_time_tariff_interval(
+                        instruction,
+                        context,
+                        session,
+                        self._admin_uri,
+                        self._admin_username,
+                        self._admin_password,
+                        self._rc_annotations,
                     )
 
         if result is not None and not result.completed:

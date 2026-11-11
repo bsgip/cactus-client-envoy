@@ -1,14 +1,18 @@
+import logging
 from collections.abc import Sequence
 
 from cactus_client.model.context import AdminContext
 from cactus_client.sep2 import lfdi_from_cert_file
 from cactus_client.time import utc_now
+from cactus_test_definitions.server.admin_instructions import AdminInstruction
+from envoy.server.model import Site
 from envoy.server.model.aggregator import NULL_AGGREGATOR_ID, Aggregator, AggregatorCertificateAssignment
 from envoy.server.model.base import Certificate
 from envoy.server.model.site import SiteGroup, SiteGroupAssignment
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger(__name__)
 CACTUS_DEFAULT_SITE_GROUP_NAME = "cactus-default"
 
 
@@ -62,3 +66,22 @@ async def site_group_ids_for_site(session: AsyncSession, site_id: int) -> Sequen
         .scalars()
         .all()
     )
+
+
+async def get_default_site_group_id(
+    instruction: AdminInstruction, context: AdminContext, session: AsyncSession
+) -> int | None:
+    """Gets the CACTUS default SiteGroup that is accessible to all sites"""
+
+    client_config = context.client_config_for(instruction.client)
+    site = (await session.execute(select(Site).where(Site.lfdi == client_config.lfdi))).scalar_one_or_none()
+    if site is None:
+        logging.error(f"get_default_site_group: no site found for LFDI {client_config.lfdi}")
+        return None
+
+    site_group_ids = await site_group_ids_for_site(session, site.site_id)
+    if not site_group_ids:
+        logging.error(f"get_default_site_group: site_id={site.site_id} has no SiteGroup membership")
+        return None
+
+    return site_group_ids[0]
