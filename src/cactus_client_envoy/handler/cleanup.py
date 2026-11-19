@@ -20,6 +20,8 @@ from envoy.server.model.tariff import TariffGeneratedRate
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cactus_client_envoy.handler.rate import reset_rates
+
 logger = logging.getLogger(__name__)
 
 
@@ -29,7 +31,7 @@ async def reset_test_state(session: AsyncSession) -> None:
     Deletion order respects FK deps. Site deletion cascades SiteGroupAssignment, SiteDERRating/Setting/
     Availability/Status, SiteLogEvent, and response. SiteGroup is deleted (and lazily recreated per test run,
     mirroring the existing SiteControlGroup pattern) since TariffGeneratedRate/DynamicOperatingEnvelope FK to
-    it without an ON DELETE CASCADE.
+    it without an ON DELETE CASCADE. Rates changed by set-poll-rate / set-post-rate are reset to envoy's defaults.
     """
     await session.execute(delete(SiteReading))
     await session.execute(delete(SiteReadingType))
@@ -41,6 +43,7 @@ async def reset_test_state(session: AsyncSession) -> None:
     await session.execute(delete(SiteControlGroup))
     await session.execute(delete(SiteGroup))
     await session.execute(delete(Site))
+    await reset_rates(session)
     await session.commit()
     logger.info("reset_test_state: envoy test state cleared")
 

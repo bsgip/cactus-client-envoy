@@ -8,7 +8,7 @@ from cactus_test_definitions.server.test_procedures import AdminInstruction
 from envoy.notification.manager.notification import NotificationManager
 from envoy.server.model.server import RuntimeServerConfig
 from envoy.server.model.subscription import SubscriptionResource
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -85,3 +85,14 @@ async def _update_runtime_config(session: AsyncSession, field: str, value: int, 
         config.changed_time = now
     setattr(config, field, value)
     await session.flush()
+
+
+async def reset_rates(session: AsyncSession) -> None:
+    """Resets every rate that set-poll-rate / set-post-rate can change back to envoy's defaults (NULL). These live in
+    envoy's global RuntimeServerConfig so would otherwise leak into every later test run."""
+    fields = {*_POLL_RATE_FIELD_MAP.values(), *_POST_RATE_FIELD_MAP.values()}
+    await session.execute(
+        update(RuntimeServerConfig)
+        .where(RuntimeServerConfig.runtime_server_config_id == 1)
+        .values({field: None for field in fields} | {"changed_time": utc_now()})
+    )
